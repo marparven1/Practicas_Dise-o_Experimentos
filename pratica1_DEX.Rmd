@@ -1,0 +1,362 @@
+---
+title: "Practica 1 DEX"
+author: "Marta Venegas Pardo"
+date: "10/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+Del tema 2.
+
+
+# Ejemplo 1. Pollos
+
+A cda animal le hemos observado dos cosas, la respuesta y los niveles de l factor
+
+```{r}
+ y<-c(100,115,95,99,105,115,98,97,93,95,98,105,105,110,94) # respuesta
+ a<-c(rep(1,5),rep(2,5),rep(3,5)) # niveles del factor
+ a<-factor(a) # hay que declararlo como factor, porque si no es una varaible numérica en R, cosa que no es 
+ ejemplo1<-aov(y~a) # Análisis de la varianza = aov=(respuesta ~ factor)
+ # N=15 , k=3
+ summary(ejemplo1) # tabla de la varianza
+```
+
+
+
+Conclusiones: 
+
+- Gr lib: k-1
+- Gr lib res_ N-k
+- Cma/CMr
+- _p-valor_: RC=p-valor$ = 0.777 >  \alpha = 0.05$, luego, no hay evidencias en contra de $H_0$
+
+
+El contraste realizado es el siguiente (pag5) apuntes:
+
+$H_0: \alpha_1 = \alpha_2 = \alpha_3$
+$H_1: \alpha_i \neq \alpha_j$ para algunos $i\neq j$
+
+
+
+
+Si a no es declarado factor, ocurriría un desastre. Haría el modelo lineal y = beta_0 + beta_1*a + epsilon
+
+```{r}
+ a<-c(rep(1,5),rep(2,5),rep(3,5)) # niveles del factor
+
+ ejemplo1.mal<-aov(y~a) # Análisis de la varianza = aov=(respuesta ~ factor)
+
+ summary(ejemplo1.mal) # tabla de la varianza
+```
+
+
+Ahora estamos contrastando $H_0: \beta-1 = 0 \quad vs \quad H_1: \beta_1 \neq 0$
+
+
+
+Estimadores de MC de los parámetros del modelo.
+
+Modelo: $y_{ij}= \mu + \alpha_i + \epsilon_{ij} \sim N(0,\sigma^2)$
+Parámetros: $\mu, \alpha_{1,2,3}, \sigma$
+```{r}
+summary(ejemplo1)
+```
+
+Ya tenemos el estimador de sigma 
+
+$\hat\sigma = CM_{\epsilon} = 59.1$
+
+
+Solución particular del SEN imponiendo. suma n_i n_i*alpha_i = 0 
+
+
+```{r}
+# mu_gorro = media global
+mu.gorro = mean(y)
+mu.gorro
+```
+
+```{r}
+# alpha.gorro_i = media de la población i-media global
+(alpha.gorro = tapply(y,a,mean)-mean(y))
+
+```
+
+
+1.2,-2,0.8
+
+
+
+
+```{r}
+str(ejemplo1)
+```
+
+La solución que R toma es la que se optiene al añadir al SEN alpha_1 = 0 
+
+```{r}
+ejemplo1$coefficients # mu gorro
+```
+
+Esta es la solución que da R, intercept es mu.gorro.
+estimador de alfa1 = 0 , a2 estimador de alfa 2 y a3 es el estimador de alfa3.
+
+
+Los de R se pueden obtener de los nuestros restandole 1.2 a cada uno de ellos.
+
+
+
+# Ejemplo 2. Sucursales
+
+
+```{r}
+y<-c(10.3,10.9,10.4,12.8,11.0,10.6,9.8,12.0, 10.1,11.6,11.0,12.2,10.5,11.4,
+9.9,13.0,10.6,11.0,10.0,12.7)
+a<-rep(c(1:4),5)
+a<-factor(a)
+ejemplo2<-aov(y~a)
+summary(ejemplo2)
+```
+
+
+- k=4
+- N=20
+- gr lib k-1
+- gr lib res N-k
+- p-valor enano, rechazo H_0
+
+Cinclusión:
+Las 4 sucursales tienen una ganancia distinta, nos interesa saber porque hemos rechazado. Aplicamos TECNICAS de comparaciones múltiples 
+
+```{r}
+library(agricolae)
+```
+
+```{r}
+#Test LSD
+#LSD.test(respuesta,factor, gl del error, CM_e)
+#por defecto toma alpha=0.05. Si lo deseamos cambiar:
+#LSD.test(respuesta,factor, gl del error, CM_e, alpha=0.01)
+lsd<-LSD.test(y,a,16,0.174)
+lsd
+```
+
+0.5592694 cantidad a partir de la cual considero dos medias distintas.
+
+
+La salida no se la intertpretacion, necesito mirarla.
+
+
+
+
+```{r}
+#Test Scheffe
+#scheffe.test(respuesta,factor, gl del error, CM_e)
+sch<-scheffe.test(y,a,16,0.174)
+sch$groups
+sch
+```
+
+Diferencia crítica. Un par de medias son consideradas significativamente distintas utilizando este método si en valor absoluto su diferencia es superior a esa cantidad.
+
+
+```{r}
+#Test Tukey
+#HSD.test(respuesta,factor, gl del error, CM_e)
+hsd<-HSD.test(y,a,16,0.174)
+hsd$groups
+hsd
+```
+
+
+StudentizedRange: Punto crítico del recorrido studentizado
+MSD es el hsd
+
+Escribir como quedan los grupos
+
+
+
+```{r}
+#Test Newman-Keuls
+#SNK.test(respuesta,factor, gl del error, CM_e)
+snk<-SNK.test(y,a,16,0.174)
+snk$groups
+snk
+```
+
+
+
+
+Tres grupos no solapados. gra suc 4 , grb suc 2 y grc suc 1 y 3 que no son significativamente distintas.
+
+
+
+```{r}
+#Test Duncan
+#duncan.test(respuesta,factor, gl del error, CM_e)
+duncan<-duncan.test(y,a,16,0.174)
+duncan$groups
+```
+
+Diferencia con el resto: también varía el alfa
+
+
+```{r}
+duncan
+```
+
+Esta tabla no está en clase. $ducan son los pcritocos con la trans del alfa. P criticos a partir de los cuales se rechaza cuando tenemos involucrada 2,3 y 4 medias.
+
+Grupos 
+
+```{r}
+#Bonferroni
+#LSD.test(respuesta,factor, gl del error, CM_e, p.adj="bon")
+bon<-LSD.test(y,a,16,0.174,p.adj="bon")
+bon
+```
+MSD es corrección LSD. Coge la tstudent pero el alfa en vez de 1- alfa /2 es 1-alfa/2m. El p crítico es mayor. 
+No es el mejor método si quiero comparar todas las medias. Misma solución que el de Tukey
+
+## Diagnosis
+
+A partir de aov se pueden obtener los siguientes 4 gráficos:
+
+### Normalidad
+
+```{r}
+#para que saque los 4 grficos en una pantalla
+layout(matrix(c(1,2,3,4),ncol=2))
+plot(ejemplo2)
+```
+
+
+- 1 _Hip. homocedasteceidad_: Si la hip fuera cierta, los datos tienen que estar en torno a una banda. Vemos la obs 11 del gr 1 un poco alejada pero no pasa nada, el resto estan en torno a una banda. La línea roja en torno a 0 es la que mejor ajuste a los datos (estimador núcleo, no lo he dado) Misma grafica q la 4, aqui ordenados por medias y allí por grupos.
+- 2
+- 3 _Normalidad_: EL títulito es para observaciones extremas. Los quantiles extremos tienen una mayor variabilidad. Las obs centrales se ajustan a una linea recta, lo que da indicativo a que los gráficos se ajustan a una ley normal
+- 4
+
+Puedo hacer el gráfico 3 por mi misma. Utilizando los resíduos que ya los tengo almacenados
+
+```{r}
+# str(ejemplo2) tenemos los resíduos
+```
+
+
+res = y- val ajustado
+
+```{r}
+qqnorm(ejemplo2$residuals) # grafico qq de normalidad
+qqline(ejemplo2$residuals) # grafico qq de normalidad + linea pasando por Q1 y Q3
+```
+
+
+
+```{r}
+qqnorm(ejemplo2$residuals,
+       main="Gráfico de normalidad" ) # grafico qq de normalidad
+qqline(ejemplo2$residuals) # grafico qq de normalidad + linea pasando por Q1 y Q3
+```
+Esto es método gráfico. Un método formal es un test de hipótesis.
+
+```{r}
+library(nortest)
+#Test de CvM  para contrastar normalidad: hay que cargar el paquete nortest
+cvm.test(ejemplo2$residuals) # le quiero aplicar el test a los resíduos
+```
+
+Conclusión, por tanto: el p-vlaor es mayor que alfa. No hay evidencias para rechazar la hipótesis nula. $H_0: \epsilon ~ N(0,\sigma^2)$, para algun $\sigma^2>0$.
+
+
+### Independencia
+
+A modo de ejercicio, en este problema no tiene sentido, porque no sabemos el orden en el que fueron obtenidas las observaciones.
+
+Vamos a suponer que los datos del vector y han sido copiados en el mismo orden que fueron obtenidos los datos
+
+
+
+```{r}
+layout(matrix(c(1,2,3),ncol=3))
+plot(c(1:20),ejemplo2$residuals, type="p") #dibuja puntos
+plot(c(1:20),ejemplo2$residuals, type="l") #dibuja lineas uniendo los puntos
+plot(c(1:20),ejemplo2$residuals, type="b", xlab="tiempo", ylab="resíduos") #ambos
+abline(h=0) #a\~nade a grafico al linea h=0
+```
+
+
+No se observa patron, podemos decir que existe independencia del tiempo.
+
+
+## Homocedasteceidad
+
+
+Gráfico de resíduos frente a medias
+
+
+
+```{r}
+plot(ejemplo2$fitted.values, ejemplo2$residuals, xlab="medias", ylab="residuos")
+abline(h=0) #a\~nade a grafico al linea h=0
+```
+
+
+```{r}
+#  residuos vs grupos
+#  primero hay que convertir a en numerico, en cc representa el box-plot de cada grupo
+a<-as.numeric(a)
+plot(a, ejemplo2$residuals, xlab="grupos", ylab="residuos")
+abline(h=0) #añade al grafico al linea h=0
+```
+
+
+
+
+
+
+
+
+```{r}
+library(lawstat)
+#Test de Levene: hay que cargar el paquete lawstat
+levene.test(y,a) # por defecto resta la mediana, en clase lo hicimos con la media y por eso no coincide
+```
+
+
+
+
+
+Errata en los apuntes, en la página 14, aparece en el test de barlett un 2.pico multiplicando al cociente de la chicuadrado. Ese 2 hay que tacharlo, porque es cuadno el log es en base 10. Nosotros siempre tomamos neperiano, por lo que no necesitamos eso.
+
+
+
+
+```{r}
+#Test de Levene: hay que cargar el paquete lawstat
+levene.test(y,a, location = "mean") # por defecto resta la mediana, en clase lo hicimos con la media y por eso no coincide
+```
+
+
+```{r}
+a<-factor(a)
+ares<-abs(ejemplo2$residuals)
+summary(aov(ares~a))
+```
+
+
+```{r}
+#Test de Bartlett
+bartlett.test(y,a)
+```
+
+Hacer el problema 1
+
+- Contraste
+- Comparaciones múltiples si procede
+- Diagnosis
