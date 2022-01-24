@@ -1,0 +1,485 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+## Prácticas del tema 6
+
+**Problema 1** Analizaremos los siguientes datos asociados a un modelo de un factor con tres niveles y una covariante:
+$$\begin{array}{|c|l|rrrrrr|}
+\hline
+\mbox{nivel del factor} & \mbox{covariante} & -0.02 & 0.99 & -0.37 & -0.08 & 0.87 & -0.41 \\
+1  & \mbox{respuesta}  &  1.29 & 6.23 &  0.15 &  1.28 & 4.58 &  0.68 \\
+\hline
+\mbox{nivel del factor}& \mbox{covariante} &   1.28 & 0.40 & -0.48 & 0.85 & 1.17 & 0.64 \\
+2 & \mbox{respuesta} &    9.08 & 5.99 &  3.48 & 5.65 & 6.75 & 5.46 \\
+\hline
+ \mbox{nivel del factor} & \mbox{covariante} & 0.12 & -1.41 & -1.20 & -0.98 & 0.84 & 0.06\\
+3 & \mbox{respuesta} &  7.23 &  0.15 &  3.06 &  4.15 & 8.40 & 5.75\\
+\hline
+\end{array}$$
+El modelo que se asume es
+$$y_{ij}=\mu  +\alpha_i+\gamma z_{ij}+\varepsilon_{ij}, \quad i=1,2,3, \quad j=1, \ldots, 6, \quad \varepsilon_{11}, \ldots, \varepsilon_{36} 
+\mbox{ i.i.d. }N(0,\sigma^2)$$
+```{r}
+z=c(-0.02,0.99,-0.37,-0.08,0.87,-0.41,1.28,0.40,-0.48,0.85,1.17,0.64,0.12,-1.41,-1.20,-0.98,0.84,0.06)
+y=c(1.29,6.23,0.15,1.28,4.58,0.68,9.08,5.99,3.48,5.65,6.75,5.46,7.23,0.15,3.06,4.15,8.40,5.75)
+a=as.factor(rep(1:3, each=6))
+```
+
+
+(a) Contrastar $H_0:\, \gamma=0$ vs  $H_1:\, \gamma\neq 0$.
+```{r}
+# Opción 1:
+ejaz=lm(y~a+z) # ajustamos un modelo lineal (ajusta bien la última)
+
+summary(ejaz) 
+# El estadístico del contraste será F = 9.557 
+# pvalor = 1.63e-07
+# gamma_gorro = 3.1607
+# intercep = mu_gorro + alpha_gorro (pero estos contrastes no serían de interes)
+# se rechaza
+# si tenemos una unica covariante, simplemente tendríamos q ajustar el modelo
+
+anova(ejaz)
+```
+
+
+```{r}
+# Opción 2:
+ejza=lm(y~z+a)   # el pvalor para z es el mismo de antes
+
+summary(ejza)
+anova(ejza)
+```
+
+Vemos que no importa el orden en que se introducen el factor y la covariante en el modelo para la estimación (summary (...)), pero sí tiene un gran efecto si solicitamos que escriba la tabla ANOVA (anova(...)), ya que sólo calcula bien la SC del último que entró: en lm(y~z+a) calcula bien la SC del factor, lm(y~a+z) calcula bien la SC de la covariante.
+
+```{r}
+# Opción 3: (no hay que recordad el orden)
+# Ajustamos el modelo completo
+ejaz = lm(y~a+z)
+# Ajustamos el modelo bajo H0
+eja = lm(y~a)
+anova(eja)
+anova(eja, ejaz) # da igual el orden ejaz ó ejza
+anova(eja, ejza)
+```
+
+
+
+(b) Contrastar $H_0:\, \alpha_1= \alpha_2= \alpha_3$ vs  $H_1:\, \exists i \neq j \, / \, \alpha_i \neq  \alpha_j$. IGUALDAD DE EFECTOS DE LA COVARIANTE
+NO VALE CON EL SUMMARY PQ NO APARECE EL TEST DE IGUALDAD
+HAY 2 MANERAS DE HACERLO 
+
+```{r}
+ejza=lm(y~z+a)   
+anova(ejza)
+```
+
+Este pvalor es bueno, pq el último que entró es el factor
+p valor = 1.060e-05 --- rechazamos la igualdad de factores --- comp múltiples
+En este caso, el contraste sobre el gamma=0 está mal hecho pq EL ORDEN INDICE
+
+Alternativamente (para no tener que acordarnos del orden),
+```{r}
+ejza=lm(y~z+a)  
+ejz=lm(y~z) # modelo bajo H0 --- no hay factor
+anova(ejz, ejaz) # da lo mismo que anova(ejz, ejza) 
+# SCE_O = 62.49
+# m = 16-14
+# SCE = 12.16
+(62.49-12.16)/( (12.16/14) * 2 )
+```
+
+Como se rechaza la igualdad de tratamientos, realizamos comparaciones múltiples
+```{r, message=FALSE, warning=FALSE}
+library(multcomp)
+mis.cm=glht(aov(ejza), linfct=mcp(a="Tukey"))
+summary(mis.cm)
+# 1 y 2 dif
+# 1 y 3 dif
+# 2 y 3 dif
+# rechazamos pq los 3 nieveles del factor tienen distinto efecto sobre la respuesta
+
+summary(mis.cm, test = adjusted(type = "Westfall"))
+# nos sale lo mismo, los 3 son diferentes
+
+```
+
+(c) Contrastar la hipótesis de paralelismo.
+
+El modelo supone que el coeficiente de la covariante es el mismo para todas las combinaciones de los niveles de los factores. Un modelo más general es el siguiente,
+$$y_{ij}=\mu  +\alpha_i+\gamma_i z_{ij}+\varepsilon_{ij}, \quad i=1,2,3, \quad j=1, \ldots, 6, \quad \varepsilon_{11}, \ldots, \varepsilon_{36}
+\mbox{ i.i.d. }N(0,\sigma^2)$$
+Se pide contrastar
+$H_0:\, \gamma_1= \gamma_2= \gamma_3$ vs  $H_1:\, \exists i \neq j \, / \, \gamma_i \neq  \gamma_j$.
+Si todos son iguales -- el modelo ancova es correcto
+
+```{r}
+#gráfico
+plot(z,y,col=c("red","blue","green")[a])
+
+#Si queremos que represente figuas coloreadas: circulos, triangulos, cuadrados,...)
+plot(z,y,pch=15+as.numeric(a),col=c("red","blue","green")[a])
+
+#si queremos incluir las rectas de regresion para cada grupo
+abline(lm(y[a==1]~z[a==1]), col="red")
+abline(lm(y[a==2]~z[a==2]), col="blue")
+abline(lm(y[a==3]~z[a==3]), col="green")
+
+#contraste de igualdad de pendientes en los grupos
+# tenemos una muestra pequeña 
+# las rectas se consideran paralelas
+# no rechazamos la hip de paralelismo
+```
+
+
+```{r}
+# TENEMOS QUE PONER *
+# AJUSTA UN GAMMA PARA CADA NIVEL DEL FACTOR
+
+# el modelo más general
+# lo último que ajusta aquí es la interacción
+anova(lm(y~a*z)) #o simplemente summary(aov(y~a*z))
+
+
+anova(lm(y~z*a)) 
+# pvalor = 0.3553 -- no evidencias en contra de H0: paralelismo
+```
+
+```{r}
+# Otra opción: comparando modelos
+ejco = lm(y~a*z)
+anova(ejco, ejaz)
+# F = 1.12
+# pvalor = 0.3552 -- lo mismo
+```
+No hay evidencias en contra de la hipótesis de paralelismo.
+
+
+**Problema 2**
+Consideremos los datos:
+
+$y$:
+ 0.6  7.0  0.8  0.5  2.5 -3.1 -1.7  0.0  5.6 -1.9 -1.0  0.8 -4.6  0.4  2.2  5.7 -1.8  0.2
+-1.0 -5.1  1.5  3.5  3.4 -1.8 -0.6  4.3  6.3  1.8  2.2  5.8  1.4  5.6  4.6 -2.5  7.6  4.8 
+
+
+$z$:
+  0.3  2.0 -0.2  0.0  0.7 -1.4 -1.0 -0.2  1.8 -0.6 -0.6  0.3 -1.9 -0.2  0.2  1.7 -1.1 -0.7
+ -0.7 -2.1 -0.3  0.8  0.8 -1.3 -0.3  0.7  0.7  0.3 -0.2  0.7 -0.1  1.2  0.6 -1.2  1.8  0.6 
+
+$w$:
+ -1.5  1.2 -1.1 -0.2  2.4  0.2 -1.6  0.0 -0.1  0.8 -0.3 -0.8  1.1 -0.8  0.1 -0.7  0.2  0.6
+ -2.1  1.1  0.1 -0.3  0.9  0.8 -0.2 -0.3  1.2 -1.6  0.6 -0.7 -0.5  1.1 -0.4  1.1  0.5 -0.2 
+
+$a$:
+1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3 3 3 
+
+$b$:
+1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 
+
+(1) Para el modelo con covariante $w$, y factores $a$ y $b$: 1COV - 2F
+
+$$y_{ijk}=\mu  +\alpha_i+ \beta_j+ \alpha \beta_{ij}+\gamma w_{ijk}+\varepsilon_{ijk}, \quad i,j=1,2,3, \quad k=1, \ldots, 4, \quad \varepsilon_{111}, \ldots, \varepsilon_{334} 
+\mbox{ i.i.d. }N(0,\sigma^2)$$
+
+Mismo gamma para todos los niveles
+
+(1.a)  Contrasta la hipótesis de paralelismo. HAY QUE EMPEZAR POR AQUÍ
+
+El modelo supone que el coeficiente de la covariante es el mismo para todas las combinaciones de los niveles de los factores. Un modelo más general es el siguiente,
+
+$$y_{ijk}=\mu  +\alpha_i+ \beta_j+ \alpha \beta_{ij}+\gamma_{ij} w_{ijk}+\varepsilon_{ijk}, \quad i,j=1,2,3, \quad k=1, \ldots, 4, \quad \varepsilon_{111}, \ldots, \varepsilon_{334} 
+\mbox{ i.i.d. }N(0,\sigma^2)$$
+
+El gamma depende de ij
+
+Se pide contrastar
+$H_0:\, \gamma_{11}= \ldots= \gamma_{33}$ vs  $H_1:\, \exists (i,j) \neq (r,s) \, / \, \gamma_{ij} \neq  \gamma_{rs}$.
+ 
+```{r}
+y=c(0.6,7.0,0.8,0.5,2.5,-3.1,-1.7,0.0,5.6,-1.9,-1.0,0.8,-4.6,0.4,2.2,5.7,-1.8,0.2,
+-1.0,-5.1,1.5,3.5, 3.4,-1.8,-0.6,4.3,6.3,1.8,2.2,5.8,1.4,5.6,4.6,-2.5,7.6,4.8)
+
+z=c(0.3, 2.0, -0.2, 0.0, 0.7, -1.4, -1.0, -0.2, 1.8, -0.6, -0.6, 0.3, -1.9, -0.2, 0.2, 1.7, -1.1, -0.7,-0.7, -2.1, -0.3, 0.8, 0.8, -1.3, -0.3, 0.7, 0.7, 0.3, -0.2, 0.7, -0.1, 1.2, 0.6, -1.2, 1.8, 0.6)
+
+w=c(-1.5,  1.2, -1.1, -0.2,  2.4,  0.2, -1.6,  0.0, -0.1,  0.8, -0.3, -0.8,  1.1, -0.8,  0.1, -0.7,  0.2,0.6, -2.1,  1.1,  0.1, -0.3,  0.9,  0.8, -0.2, -0.3,  1.2, -1.6,  0.6, -0.7, -0.5,  1.1, -0.4,  1.1,  0.5, -0.2)
+
+a=as.factor(rep(1:3, each=12))
+b=as.factor(rep(1:3, 12))
+
+#paralelismo
+new=a:b # es un nuevo factor que toma axb valores, un valor distinto para cada celdilla
+
+# CUANDO TENEMOS DOS O MAS FACTORES TENEMOS QUE CREAR UNO NUEVO QUE SEA COMBINACION DE LOS DEMÁS
+```
+
+```{r}
+sal=aov(y~new*w)
+summary(sal)
+# pvalor = 0.838
+# NO HAY EVIDENCIAS EN CONTRA DE HO - NO HAY ENVIDENCIAS EN CONTRA DEL MODELO ANCOVA
+# UNA VEZ QUE EL MODELO ANCOVA ES ADECUADO, HACEMOS LOS DEMÁS CONTRASTES
+```
+
+Equivalentemente,
+```{r}
+# Opción 2:
+mod1=lm(y~new*w) 
+mod2=lm(y~new+w) 
+anova(mod1, mod2)
+```
+No hay evidencias en contra de la hipótesis de paralelismo.
+
+
+
+
+(1.b) Contrasta la hipótesis de no efecto de la covariante. habría 3 opciones
+
+Se pide contrastar $H_0:\, \gamma=0$ vs  $H_1:\, \gamma\neq 0$.
+```{r}
+mod1=lm(y~a*b+w) # modelo completo - poniendo después anova, estaría bien pq la última en entrar es la w
+
+mod2=lm(y~a*b)   # modelo bajo H0
+
+anova(mod1, mod2)# los comparamos
+```
+SCE = 
+SCE_O = 
+pvalor = 0.5353 - no hay evidencias en contra de H0 - por lo que la covariante no tendrá efecto sobre la respuesta
+
+No hay evidencias en contra de la hipótesis de no efecto de la covariante.
+
+
+(1.c) Estudia el efecto de los factores sobre la respuesta.
+
+COMO TENEMOS 2 FACTORES - LO PRIMERO QUE ESTUDIAMOS ES LA INTERACCION
+
+Estudiamos primero la interacción, esto es, contrastamos
+$H_0:\, \alpha\beta_{11}= \ldots= \alpha\beta_{33}$ vs  $H_1:\, \exists (i,j) \neq (r,s) \, / \, \alpha\beta_{ij} \neq  \alpha\beta_{rs}$.
+
+
+```{r}
+mod1=lm(y~a*b+w) # MODELO COMPLETO
+mod3=lm(y~a+b+w) # MODELO BAJO HO - LOS EFECTOS SE SUMAN (NO TIENEN INTERACCION)
+anova(mod1, mod3)# LOS COMPARAMOS
+```
+pvalor = 0.183
+Podemos suponer que es un modelo aditivo
+Estudiamos la igualdad de efectos de los factores
+
+No hay evidencias significativas en contra de la hipótesis de no interacción. Pasamos a estudiar el efecto de los factores. 
+
+
+En primer lugar estudiamos la *igualdad de efectos del factor B*, esto es, contrastamos  $H_0:\, \beta_1= \beta_2= \beta_3$ vs  $H_1:\, \exists i \neq j \, / \, \beta_i \neq  \beta_j$.
+
+```{r}
+mod1=lm(y~a*b+w) # modelo completo
+mod4=lm(y~a+w)   # modelo bajo h0 - solamente está el A (estamos simultaneamente constrastando igualdad de efectos de los beta y no iteracción)
+anova(mod1, mod4) 
+```
+
+o bien, si eliminamos la interacción, HABIAMOS VISTO QUE ERA NO SIGNIFICATIVA
+```{r}
+mod11=lm(y~a+b+w) # pq habiamos visto que el modelo era aditivo
+mod4=lm(y~a+w)    # bajo H0
+anova(mod11, mod4) 
+```
+pvalor = 0.1439
+No hay evidencias en contra de la hipótesis de igualdad  de efectos del factor B. 
+
+
+
+Pasamos ahora a contrastar la *igualdad de efectos del factor A*, esto es, contrastamos  $H_0:\, \alpha_1= \alpha_2= \alpha_3$ vs  $H_1:\, \exists i \neq j \, / \, \alpha_i \neq  \alpha_j$.
+ 
+```{r}
+mod1=lm(y~a*b+w)
+mod5=lm(y~b+w) # bajo h0 tb estamos constrastando la no iteracion
+anova(mod1, mod5) 
+```
+
+o bien, si eliminamos la interacción,
+```{r}
+mod11=lm(y~a+b+w) # suponiendo modelo aditivo 
+mod5=lm(y~b+w)    # aditivo bajo H0
+anova(mod11, mod5) 
+```
+pvalor = 0.0329 
+distintos niveles de a tienen distinto efecto sobre la respuesta
+para ver cu
+ales de ellos son distintos - comp multiples
+
+En ambos casos rechazamos la igualdad de efectos del factor A, por lo que realizamos *comparaciones múltiples:*
+```{r}
+# como estamos en un ancova, no vale el paquete agricolae - usamos multcomp
+library(multcomp)
+
+#--- da mensaje de error si escribimos
+#--- mis.cm=glht(mod1, linfct=mcp(a="Tukey"))
+#--- summary(mis.cm)
+#--- nos da que todos son iguales
+#--- Como el factor B no tiene efecto, podemos solicitar que haga CM en el modelo sin este factor. Esto no da mensaje de error:
+
+mod6=lm(y~a+w) # como el factor b no tiene efecto (no incide en el experimento ya que ni intereacciona ni tiene dif efectos), lo quitamos del modelo
+
+mod7=lm(y~w)
+anova(mod6, mod7)
+
+mis.cm=glht(mod6, linfct=mcp(a="Tukey")) # hacemos comp multiples sobre el mdelo sin el B
+summary(mis.cm) # NOS QUEDAMOS MEJOR CON EL WESTFALL
+
+
+summary(mis.cm, test = adjusted(type = "Westfall"))
+# rechazamos pq tenemos 2 grupos (1,2) Y 3
+```
+CUANDO UN FACTOR NO TENGA EFECTO - LO ELIMINAMOS PQ SI NO EL MULTCOMP DA ERROR !!!!!!!
+
+
+
+
+
+(2) Para el modelo con   covariantes $z$ y $w$, y factor $a$: 2 COV - 1F
+
+$$y_{ij}=\mu  + \alpha_i +\gamma z_{ij}+ \theta w_{ij}+\varepsilon_{ij}, \quad i=1,2,3, \quad j=1, \ldots, 12, \quad \varepsilon_{1\, 1}, \ldots, \varepsilon_{3\, 12} 
+\mbox{ i.i.d. }N(0,\sigma^2)$$
+
+(2.a)  Contrasta la hipótesis de igualadad de pendientes para cada covariante.
+PRIMERO DEBEMOS COMPROBAR QUE EL MODELO ES ADECUADO
+TENEMOS QUE SUPONER HIPERPLANOS PARALELOS
+
+El modelo supone que el coeficiente de las covariante es el mismo para todos los niveles del factor. Un modelo más general es el siguiente,
+$$y_{ij}=\mu + \alpha_i +\gamma_i z_{ij}+ \theta_i w_{ij}+\varepsilon_{ij}, \quad i=1,2,3, \quad j=1, \ldots, 12, \quad \varepsilon_{1\, 1}, \ldots, \varepsilon_{3\, 12} 
+\mbox{ i.i.d. }N(0,\sigma^2)$$
+
+
+PARA LA HIP DE PARALELISMO TENDRIAMOS QUE HACER DOS CONTRASTES:
+- IGUALDAD DE GAMMA
+- IGUALDAD DE THETA
+
+Se pide contrastar
+$$H_0:\, \gamma_{1}= \gamma_2= \gamma_{3} \quad \mbox{vs} \quad H_1:\, \exists i \neq j \, / \, \gamma_{i} \neq  \gamma_{j}$$
+y
+$$H_0:\, \theta_{1}= \theta_2= \theta_{3} \quad \mbox{vs} \quad H_1:\, \exists i \neq j \, / \, \theta_{i} \neq  \theta_{j}$$
+ 
+```{r}
+mod1zw=lm(y~a+z+w+a:z+a:w) # igualdad de efecto de los theta (nos quedamos con a:w)
+anova(mod1zw)
+
+mod1wz=lm(y~a+z+w+a:w+a:z) # igualdad de efecto de los gamma (a:z)
+anova(mod1wz)
+```
+pvalor: 0.68530 - para la iguadad de theta
+pvalor: 0.1001 - para la igualdad de gamma
+No hay evidencias en contra de la  hipótesis de   igualadad de pendientes, para cada covariante.
+
+```{r}
+# Opción 2: Comparando modelos
+modlzw = lm(y~a+z+w+a:z+a:w)
+mod1 = lm(y~a+z+w) # H0: gamma1=gamma2=gamma3, theta1=theta2=tetha2 
+anova(modlzw,mod1) 
+# pvalor = 
+# conclusión: el modelo ancova es adecuado
+```
+
+
+
+(2.a)  Contrasta la hipótesis de  no efecto para cada covariante.
+
+
+
+
+Se pide contrastar 
+$$H_0: \gamma=0 \quad \mbox{vs} \quad H_1: \gamma \neq 0,$$
+y
+$$H_0: \theta=0 \quad \mbox{vs} \quad H_1: \theta \neq 0.$$
+```{r}
+mod1=lm(y~a+z+w)
+summary(mod1)
+```
+No hay evidencias en contra del no efecto de la covariante $w$, sin embargo se rechaza la hipótesis de no efecto de la covariante $z$.
+
+(2.c) Estudia el efecto del factor sobre la respuesta.
+
+ Se pide contrastar $H_0:\, \alpha_1= \alpha_2= \alpha_3$ vs  $H_1:\, \exists i \neq j \, / \, \alpha_i \neq  \alpha_j$.
+
+```{r}
+mod1=lm(y~a+z+w); 
+mod2=lm(y~z+w); 
+anova(mod1, mod2)
+```
+
+Se rechaza la hipótesis de  igualdad de efectos del factor A, por lo que pasamos a realizar comparaciones múltiples:
+```{r}
+mis.cm=glht(aov(mod1), linfct=mcp(a="Tukey"))
+summary(mis.cm)
+summary(mis.cm, test = adjusted(type = "Westfall"))
+```
+
+
+
+
+# Modelo 1F 1Cov
+```{r}
+y=c(0.6,7.0,0.8,0.5,2.5,-3.1,-1.7,0.0,5.6,-1.9,-1.0,0.8,-4.6,0.4,2.2,5.7,-1.8,0.2,
+-1.0,-5.1,1.5,3.5, 3.4,-1.8,-0.6,4.3,6.3,1.8,2.2,5.8,1.4,5.6,4.6,-2.5,7.6,4.8)
+
+z=c(0.3, 2.0, -0.2, 0.0, 0.7, -1.4, -1.0, -0.2, 1.8, -0.6, -0.6, 0.3, -1.9, -0.2, 0.2, 1.7, -1.1, -0.7,-0.7, -2.1, -0.3, 0.8, 0.8, -1.3, -0.3, 0.7, 0.7, 0.3, -0.2, 0.7, -0.1, 1.2, 0.6, -1.2, 1.8, 0.6)
+
+b=as.factor(rep(1:3, 12))
+```
+
+
+## Contrastamos la hip del parelelismo
+
+```{r}
+anova(lm(y~b*z))
+```
+pvalor = 0.8014
+No hay evidencias en contra de la hipotesis del pararelismo por lo tanto el modelo ANCOVA es adecuado
+
+
+## Contraste no efecto de la covariante
+$H_0:\, \gamma=0$ vs  $H_1:\, \gamma\neq 0$.
+```{r}
+ejbz=lm(y~b+z) # ajustamos un modelo lineal (ajusta bien la última)
+summary(ejbz)
+```
+pvalor = 2e-16
+Conclusion: La covariante tiene efecto en la respuesta
+
+## ¿Incide el factor en la respuesta?
+Contraste de igualdad de efecto del factor
+$H_0:\beta_{1}=\beta_{2}=\beta_{3}$
+$H_1:\exists i\neq j$ 
+tal que $\beta_{i} \neq \beta_{j}$
+
+```{r}
+# Opción 1:
+ejzb=lm(y~z+b) # ajustamos un modelo lineal (ajusta bien la última)
+summary(ejzb)
+anova(ejzb)
+```
+
+```{r}
+# Opción 2:
+ejzb = lm(y~z+b)
+ejz = lm(y~z)
+anova(ejzb, ejz)
+
+
+```
+
+```{r}
+# Comparaciones múltiples 
+library(multcomp)
+
+mis.cm=glht(aov(ejzb), linfct=mcp(b="Tukey")) # hacemos comp multiples sobre el mdelo sin el B
+summary(mis.cm) # NOS QUEDAMOS MEJOR CON EL WESTFALL
+
+
+summary(mis.cm, test = adjusted(type = "Westfall"))
+```
+```
+

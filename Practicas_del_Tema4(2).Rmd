@@ -1,0 +1,316 @@
+---
+title: "Prácticas del Tema 4"
+output:
+  html_document: default
+  pdf_document: default
+---
+**EJEMPLO 1: Diseño con factores cruzados.**  Consideramos el data.frame 'film', que está incluido en
+este paquete. Consta de 36 observaciones sobre las cuatro variables: thickness (grosor, es la variable
+respuesta), Gate (un vector numérico con valores 2, 4, 6), Operator (un factor con tres niveles) y Day
+(un vector numérico con valores 1, 2). Durante dos días seleccionados al azar se realizó el siguiente
+experimento: se seleccionan al azar tres operarios, que hacen dos mediciones del grosor de cierta
+pieza, que es producida por tres máquinas, cada operario hace las mediciones en las tres máquinas.
+Los tres factores (día, operario y máquina) están cruzados. Analizamos los datos
+
+```{r Ejemplo1a}
+library(EMSaov)
+data(film)
+film
+ejemplo1=EMSanova(thickness ~ Gate + Operator + Day, data = film, type = c("F", "R", "R"));
+ejemplo1
+```
+
+
+EMS en aptes (carilla 2)
+
+Nota: Error+2Gate:Operator:Day+6Gate:Day+4Gate:Operator+12Gate (estudiar los que tacho ahí y el denominador que me queda. Reflexionar)
+
+
+Para el contraste de igualdad de efectos de las máquinas tenemos dos opciones:
+
+
+- Satterthwaite para construir un estadístico F aproximado
+
+    - Aproximo denominador
+    - Aproximo ambos
+
+- Teniendo en cuenta que la interacción Gate:Day es no significativa, entonces podemos:
+
+    - Denominados CM maq-op (a mano)
+    - $SC_{\epsilon}^{nueva}0 SC_{Maq:Dia}+SC_{\epsilon}$. Con grados de libertad la suma de los grados de cada sumando
+
+
+(a) Aplicar el método de Satterthwaite para construir un F estadístico aproximado.
+
+(a.1) Aplicando la primera opción del apartado 3. Método Satterthwaite para NUM
+
+```{r Ejemplo1b}
+CMGat = 0.786586111
+CMGatOpe =  0.010711111
+CMGatDay = 0.005669444
+CMGatOpeDay = 0.002477778 # interacción de los 3
+
+den = CMGatOpe + CMGatDay - CMGatOpeDay
+EstF = CMGat/den
+EstF # este hay que hacerlo a mano
+
+gl1 = 3-1
+gl2 = den^2/(CMGatOpe^2/4+CMGatDay^2/2+CMGatOpeDay^2/4) # aproximo los gr libr del denominador
+
+gl1
+gl2
+
+pvalue = 1-pf(EstF,gl1,gl2)
+pvalue # aquí hgo el contraste de igualdad de efectos del factor fijo
+```
+
+(a.2) Aplicando la segunda opción del apartado 3 Aproximo NUM y DEN (es la que aplica el paquete):
+
+
+```{r Ejemplo1c}
+ApproxF(SS.table = ejemplo1, # tabla de las sumas de cuadrados, es la salida de EMSanova
+        approx.name = "Gate") # el que quiero aproximar entre comillas
+# aplica Satter waiter II
+```
+
+Salida:
+
+- Test F aproxx, el valor de l F
+- Grados lib num: 2.01261
+- grado lib deno: 5.995597
+- aprox del p-valor: 0.0002010433, rechazo
+
+En ambos casos rechazamos (sat waiter 1 y sat waiter 2). Se rechaza $H_0$ con ambas aproximaciones.
+
+
+
+
+
+Si hacemos lo mismo con los otros factores vemos que, en efecto, el resultado es el que ya devolvía el paquete en ejemplo1:
+
+Lo hago aunque en realidad no es necesario, por lo que me está devolviendo el exacto
+
+
+```{r Ejemplo1d}
+ApproxF(SS.table = ejemplo1, approx.name = "Operator")
+ApproxF(SS.table = ejemplo1, approx.name = "Day")
+```
+
+
+(b) Teniendo en cuenta que la interacción Gate:Day es no significativa, entonces podríamos:
+
+
+(b.1) utilizar el CM de Gate:Operator como denominador (esto habría que hacerlo "a mano"):
+
+```{r Ejemplo1e}
+CMGat = 0.786586111
+CMGatOpe = 0.010711111
+
+gl1 = 2
+gl2 = 4
+
+EstF = CMGat/CMGatOpe
+EstF
+
+pvalue = 1-pf(EstF,gl1,gl2) # 1- cola superior
+pvalue
+```
+
+(b.2) tomar como $SC_{\varepsilon}^{nueva} = SC_{Gate:Day}+SC_\varepsilon$ con grados de libertad 
+$gl(SC_{\varepsilon}^{nueva}) = gl(SC_{Gate:Day})+gl(SC_\varepsilon)$.
+
+Cuando una SC no se rechaza le sumo la del error
+
+```{r Ejemplo1f}
+une = c("Gate:Day", "Residuals") # le he sumado la del error
+PooledANOVA(ejemplo1, une)
+```
+Notas:
+
+- CME= 0.0009	antes era 0.003, ha cambiado.
+- Los F stadisticos han cambiado también, antes 9.1 y 7.6 y ahora 3.47 y 2.88
+
+
+
+De nuevo, se concluye que hay diferencias significativas entre las máquinas. Puesto que se trata de un factor fijo, estudiamos las comparaciones múltiples considerando la EMS y los grados de libertad de Gate:Operador, que se tomó como denominador en la aproximación (b.1):
+
+
+
+```{r Ejemplo1g}
+library(agricolae)
+snk=SNK.test(film$thickness, # variable respuesta
+             film$Gate, # vble que define los grupos
+             4, # gr libertad
+             0.010711111) # CM_denominador (Deno es el gate:operator) 0.010711111
+# ha tomado CM_ab como estimador de la var(el denominador del F-estadístico)
+
+
+snk$groups
+```
+
+Hemos rechazado porque cada máquina tiene un efecto diferente.
+
+
+
+
+**EJEMPLO 2: Diseño con factores cruzados y anidados.**  Un ingeniero desea estudiar el rendimineto
+de tres máquinas situadas en distintas ciudades, cada una de las cuales puede funcionar a dos niveles de potencia. Se lleva a cabo un experimento en el que cada máquina se prueba en los dos niveles de potencia, el funcionamiento de cada máquina es controlado por tres operarios, y cada uno de ellos anota tres observaciones para cada nivel. 
+
+No sabemos si los niveles de potencia son idénticos o no. Podemos interpretar ambas tal y como está redactado el problema. 
+
+- Cruzado si mismos niveles de potencia 
+- Anidado en máquinas si no
+
+
+Tampoco indica si los operarios son los mismos o no. Al decir que las máquinas están en distintas ciudades podemos interpretar que los operarios no son los mismos, aunque podrían viajar.
+
+- Cruzado si mismos niv pot y mismos operarios
+
+
+
+\[
+\begin{array}{cccc}
+\hline %
+ & \mbox{Máquina 1} & \mbox{Máquina 2} & \mbox{Máquina 3} \\ 
+\hline 
+ & \mbox{Operario} & \mbox{Operario} & \mbox{Operario}  \\
+\hline
+ \mbox{Potencia} &
+\begin{array}{ccc} 1 & 2 &  3 \end{array}
+& \begin{array}{ccc}   1 &  2 &  3 \end{array}
+& \begin{array}{ccc}   1 &  2 &  3 \end{array} \\ 
+\hline
+1 & \begin{array}{ccc} 34.1 & 34.7 & 35.2 \\
+                       32.3 & 35.9 & 35.8 \\
+                       32.6 & 36 & 34.1 \end{array} &
+    \begin{array}{ccc} 32.1 & 33.1 & 32.8 \\
+                       33.5 & 34.7 & 35.1 \\
+                       34 & 33.9 & 34.3 \end{array} &
+    \begin{array}{ccc} 32.9 & 34.8 & 33.6 \\
+                       33 & 34.4 & 32.8 \\
+                       33.1 & 33.8 & 31.7 \end{array} \\
+2 & \begin{array}{ccc} 24.3 & 25.1 & 25.7 \\
+                       26.3 & 26.3 & 26.1 \\
+                       27.1 & 25.6 & 24.9 \end{array} &
+    \begin{array}{ccc} 24.1 & 24.1 & 26 \\
+                       25 & 25.1 & 27.1 \\
+                       26.3 & 27.9 & 25.9 \end{array} &
+    \begin{array}{ccc} 24.2 & 25.2 & 24.7 \\
+                       26.1 & 27.4 & 22 \\
+                       25.3 & 26 & 24.8 \end{array} \\
+\hline
+\end{array}
+\]
+
+
+Vamos a resolverlo suponiendo mismos niveles de potencias para todas las máquinas (es decir, que están cruzados) y distintos operarios, es decir, los operarios están anidados en las máquinas
+
+Paso 1. Escribir el modelo e hipótesis distribucionales. Me voy a aptes
+
+Analice los resultados suponiendo que: 
+
+(a) Todos los factores son fijos: 
+
+```{r Ejemplo2a}
+library(EMSaov)
+y=c(34.1, 34.7, 35.2, 32.1, 33.1, 32.8, 32.9, 34.8, 33.6,
+    32.3, 35.9, 35.8, 33.5, 34.7, 35.1, 33.0, 34.4, 32.8,
+    32.6, 36.0, 34.1, 34.0, 33.9, 34.3, 33.1, 33.8, 31.7,
+    24.3, 25.1, 25.7, 24.1, 24.1, 26.0, 24.2, 25.2, 24.7,
+    26.3, 26.3, 26.1, 25.0, 25.1, 27.1, 26.1, 27.4, 22.0,
+    27.1, 25.6, 24.9, 26.3, 27.9, 25.9, 25.3, 26.0, 24.8)
+operario=as.factor(rep(1:3, 18))
+maquina=as.factor(rep(rep(1:3, each=3),6))
+potencia=as.factor(rep(1:2, each=27))
+# tengo que construir data.frame para la tabla
+ejemplo2=data.frame(resp=y,maq=maquina,pot=potencia, oper=operario)
+
+sal=EMSanova(resp~maq+oper+pot # resp y los factores detrás
+             # mas no es que sea aditivo, es que hago el modelo completo
+             , data=ejemplo2,
+             type=c("F","F","F"), # type si fijo o anidado
+             nested=c(NA,"maq",NA))
+sal
+```
+Igualdad de potencia: 	<0.0001
+
+Debo hacer comparaciones múltiples para las máquinas y los operarios.
+
+- Máquinas
+
+
+```{r }
+library(agricolae)
+## Para las máquinas del operario 1 
+snkComparacion1=SNK.test(y[operario==1], # variable respuesta
+             maquina[operario==1], # vble que define los grupos
+              DFerror =  36, # gr libertad  
+              MSerror = 1.0766667	) # CM_denominador (Deno es el error) 
+# ha tomado CM_e como estimador de la var(el denominador del F-estadístico)
+snkComparacion1$groups
+
+## Para las máquinas del operario 2 
+snkComparacion2=SNK.test(y[operario==2], # variable respuesta
+             maquina[operario==2], # vble que define los grupos
+              DFerror =  36, # gr libertad  
+              MSerror = 1.0766667	) # CM_denominador (Deno es el error) 
+# ha tomado CM_e como estimador de la var(el denominador del F-estadístico)
+snkComparacion2$groups
+
+## Para las máquinas del operario 3
+snkComparacion3=SNK.test(y[maquina==3], # variable respuesta
+             operario[maquina==3], # vble que define los grupos
+              DFerror =  36, # gr libertad  
+              MSerror = 1.0766667	) # CM_denominador (Deno es el error) 
+# ha tomado CM_e como estimador de la var(el denominador del F-estadístico)
+snkComparacion3$groups
+
+
+
+```
+
+
+
+
+
+- Operarios
+
+```{r}
+library(agricolae)
+
+
+
+snk=SNK.test(ejemplo2$resp, # variable respuesta
+             ejemplo2$oper, # vble que define los grupos
+              DFerror =  36, # gr libertad  
+              MSerror = 1.0766667	) # CM_denominador (Deno es el error) 
+# ha tomado CM_e como estimador de la var(el denominador del F-estadístico)
+snk$groups
+
+duncan.test(ejemplo2$resp, # variable respuesta
+             ejemplo2$oper, # vble que define los grupos
+              DFerror =  36, # gr libertad  
+              MSerror = 1.0766667)$groups
+
+
+```
+
+
+
+(b) Los operarios son seleccionados al azar: 
+
+La instrucción solo cambia en el R
+
+```{r Ejemplo2b}
+sal=EMSanova(resp~maq+oper+pot, data=ejemplo2,type=c("F","R","F"), nested=c(NA,"maq",NA))
+sal
+```
+
+Ahora las máquinas no son significativamente distintas
+
+(c) Los operarios y las máquinas son seleccionadas al azar:
+```{r Ejemplo2c}
+sal=EMSanova(resp~maq+oper+pot, data=ejemplo2,type=c("R","R","F"), nested=c(NA,"maq",NA))
+sal
+```
+

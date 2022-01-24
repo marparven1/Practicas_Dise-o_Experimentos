@@ -1,0 +1,528 @@
+---
+title: "Examen"
+author: "Marta Venegas Pardo"
+date: "1/24/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(EMSaov)
+library(agricolae)
+library(multcomp)
+```
+
+
+
+# Ejercicio 1. Diseño con dos factores
+
+Objetivo: Estudiar la incidencia de la temperatura y de tres tipos de materiales plásticos en la producción de neumáticos
+
+Factor 1: Temperatura, 3 niveles
+Factor 2: Tipo de pástico, 3 niveles
+
+
+Y= Horas de rodaje (Vida útil de los neumáticos )
+
+
+
+## Modelo y estimación de parámetros
+
+Se trata de un experimento con dos factores. Fijos, no me dicen que sean aleatorios.
+
+\[Y_{ijk}= \mu + \alpha_i + \beta_j + \alpha\beta_{ij} + \epsilon_{ijk} \quad i=1,\dots,a=3 ; j=1,\dots,b=3 ; k=1,\dots,=3
+\]
+N=abn 27
+
+Donde:
+
+- Yijk= k-ésima respuesta (horas de rodaje) del i-ésimo nivel de temperatura y el j-ésimo tipo de plástico
+- mu= media de todas als observaciones, media de las horas de rodaje
+- alpha_i= efecto principal del i-ésimo nivel de temperatura (ctes desconocidas)
+- beta_j= ef. ppal del j-ésimo tipo de plástico (ctes desconocidas)
+- alphabeta_ij= efecto de la interacción del iésimo nivel de temperatura con el j-ésimo tipo de plástico (ctes desconocidas)
+- epsion= erroress. Se asumen iid de una $\epsilon_{ijk} \sim N(0,\sigma^2)$
+
+
+
+Estimación de los parámetros:
+
+\[Y_{ijk}= \hat\mu + \hat\alpha_i + \hat\beta_j + \widehat{\alpha\beta_{ij}}= \overline y_{\dots} + (\overline y_{i..} - \overline y_{\dots} ) + (\overline y_{.j.} - \overline y_{\dots} ) + (\overline y_{ij.} - \overline y_{i..}- \overline y_{.j.}  +\overline y_{\dots} ) =  \overline y_{ij.} = \sum_{k=1}^3 \dfrac{y_{ijk}}{3}\]
+
+Estimamos los parámetros:
+
+```{r}
+a=3
+b=3
+n=3
+vidaUtil=c(580,1090,1392,560, # era 568. Cambian un poco las SC, pero weno. conclusiones =
+           1087,1380,570,1085,1386,550,1070,1328,530,1035,1312,579,1000,1299,546,1045,867,575,1053,904,599,1066,889)
+temp <-rep( rep(c(100,125,150),3),3)
+temp<-as.factor(temp)
+plastico<-c(rep(1,9),rep(2,9),rep(3,9))
+plastico<-as.factor(plastico)
+datos<-data.frame(vidaUtil,temp,plastico)
+
+
+
+
+cat("Y gorro = " , sum(vidaUtil)/3, "\n")
+cat("Estimación de la media de la vida útil de los neumáticos, mugorro=" , (mugorro = mean(vidaUtil)), "\n")
+cat("Estiamción del efecto de los niveles de temperatura, alphagorro=" , (alphagorro = sum(vidaUtil)/(b*n) - mugorro), "\n")
+cat("Estimación del efecto del tipo de plástico, betagorro=" , (betagorro = sum(vidaUtil)/(b*n) - mugorro), "\n")
+cat("Estimación de la interacción, betagorro=" , (alphabetagorro = sum(vidaUtil)/(n)-alphagorro-betagorro  + mugorro), "\n")
+```
+
+
+## Diagrama de interacción. Aditividad
+
+
+Vamos a hacer el gráfico de iteracción para ver si existe o no interacción entre los factores, en caso de no haberla, se trataría de un modelo aditivo.
+
+```{r}
+interaction.plot(temp,plastico,vidaUtil)
+```
+
+Vemos que las curvas para los niveles de plástico 1 y 2 son paralelas, lo que indica que no existe interacción, sin embargo, la del plástico 3 si que corta al resto, por tanto, a modo gráficom concluímos con que el nivel de temperatura y el de plástico si interaccionan.
+No se trata de un modelo aditivo (a modo grafico).
+
+Compruebo con un test. $H_0: \sigma_{\alpha\beta}=0 \quad H_1: \sigma_{\alpha\beta}>0$
+
+
+```{r}
+anova<-EMSanova(vidaUtil~plastico+temp, data = datos, type = c("F","F"))
+anova
+```
+
+Resultados: 
+
+- p-valor: <0.0001 < 0.05
+- Conclusión: si existe interacción entre los niveles de temperatura y de plástico
+
+
+## Influencia en Y de los factores y CM
+
+- Contraste deigualdad de efectos de la temperatura: $H_0: \alpha_1=\alpha_2=\alpha_3 \quad H_1: \exists \space i\neq j \space  |  \space \alpha_i \neq \alpha_j \quad \text{ para algún } i,j=1,2,3$
+
+    - p-valor: <0.0001 < 0.05 (rechazo)
+    - Conclusión: No existen diferencias significativas para aceptar que el nivel de temperatura no incide en la vida útil de los neumáticos.
+
+Comparaciones múltiples
+
+```{r}
+comp = SNK.test(vidaUtil,trt = temp, 18	, 372.037	)
+comp$groups
+```
+
+
+Existen tres niveles de temperatura que afectan de manera distinta a la vida útil de los neumáticos
+
+
+
+
+
+- Contraste de  igualdad de efectos  del tipo de plástico: $H_0: \beta_1=\beta_2=\beta_3 \quad H_1: \exists \space i\neq j \space  |  \space \beta_i \neq \beta_j \quad \text{ para algún } i,j=1,2,3$
+
+    - p-valor: <0.0001 < 0.05 (rechazo)
+    - Conclusión: No existen diferencias significativas para aceptar que el tipo de plástico no incide en la vida útil de los neumáticos.
+
+Comparaciones múltiples
+
+```{r}
+comp = SNK.test(vidaUtil,trt = plastico, 18	, 372.037	)
+comp$groups
+```
+
+Los tres tipos de plástico inciden de manera diferente en la vida útil de los neumárivos
+
+## Suponemos
+
+### Plástico es aleatorio
+
+En este caso, $\beta_{j} \space iid \sim N(0,\sigma^2_{\beta})$ y $\alpha\beta_{ij} \space id \sim N(0,\frac{a-1}{a}\sigma^2_{\alpha\beta})$. Ambas incorreladas
+
+```{r}
+anova<-EMSanova(vidaUtil~plastico+temp, data = datos, type = c("R","F"))
+anova
+```
+
+En primer lugar, vuelvo a rechazar el contraste de no interacción,ambos factores interaccionan. De nuevo, no existen diferencias significativas para afirmar que la temperatura del plástico no incida en la vida útil de los neumáticos (p-valor <0.0001).
+
+
+- Contraste de igualdad de efectos de la temperatura: $H_0: \alpha_1=\alpha_2=\alpha_3 \quad H_1: \exists \space i\neq j \space  |  \space \alpha_i \neq \alpha_j \quad \text{ para algún } i,j=1,2,3$
+
+    - p-valor: 0.0165 < 0.05 (rechazo)
+    - Conclusión: No existen diferencias significativas para aceptar que el nivel de temperatura no incide en la vida útil de los neumáticos.
+
+Comparaciones múltiples:
+
+```{r}
+SNK.test(vidaUtil,temp,18,72915.556)$groups
+```
+
+
+Existen dos grupso de temperatura que afectan diferente a la vida útil. 150 y 125 grados y luego 100.
+
+
+
+- Contraste de no efecto del tipo de plástico: $H_0: \sigma_{\beta}=0 \quad H_1: \sigma_{\beta}>0$
+
+    - p-valor: <0.0001 < 0.05 (rechazo)
+    - Conclusión: No existen diferencias significativas para aceptar que el tipo de plástico no incide en el tiempo de vida útil de los neumáticos.
+
+
+
+
+
+
+
+
+
+
+### Ambos factores son aleatorios
+
+En este caso, además de las hipótesis distribucionales para el factore beta, se tiene que $\alpha_{i} \sim N(0,\sigma^2_{\alpha})$ y $\alpha\beta_{ij} \space iid \sim N(0,\sigma^2_{\alpha\beta})$. Todas incorreladas entre sió
+
+```{r}
+anova<-EMSanova(vidaUtil~plastico+temp, data = datos, type = c("R","R"))
+anova
+```
+
+
+- Contraste de interacción: vuelvo a rechazar el contraste de no interacción,ambos factores interaccionan. De nuevo, no existen diferencias significativas para afirmar que la temperatura del plástico no incida en la vida útil de los neumáticos (p-valor <0.0001).
+
+
+- Contraste de no efecto de la temperatura: $H_0: \sigma_{\alpha}=0 \quad H_1: \sigma_{\alpha}>0$
+
+    - p-valor: 0.0165 < 0.05 (rechazo)
+    - Conclusión: La temperatura incide en el tiempo de vida útil de los neumáticos
+
+
+- Contraste de no efecto del tipo de plástico: $H_0: \sigma_{\beta}=0 \quad H_1: \sigma_{\beta}>0$
+
+    - p-valor: 0.4368 > 0.05 (acepto)
+    - Conclusión: No existen diferencias significativas para aceptar que el tipo de plástico incide en el tiempo de vida útil de los neumáticos.
+
+
+
+
+
+
+
+
+
+
+
+
+# Ejercicio 2. Cuadrado latino
+
+
+Objetivo: Estudiar la incidencia de la temperatura y de tres tipos de materiales plásticos en la producción de neumáticos
+
+Factor 1: Temperatura, 3 niveles
+Factor 2: Tipo de pástico, 3 niveles
+
+
+Y= Horas de rodaje (Vida útil de los neumáticos )
+
+
+
+## Modelo y estimación de parámetros
+
+Se trata de un experimento con dos factores. Fijos, no me dicen que sean aleatorios.
+
+\[Y_{ijk}= \mu + \alpha_i + \beta_j + \gamma_{k} + \epsilon_{ijk} \quad i=1,\dots,p=4 ; j=1,\dots,p=4 ; k=k(ij)=1,2,3,4\]
+
+
+Donde:
+
+- Yijk= prolongación del sueño del paciente con la k-ñesima pastilla, i-ésimo peso y j-ésima presión alterial
+- mu= prolongación media del sueño de todos los pacientes
+- alpha_i= efecto principal de la presión (filas). Constantes desconocidas
+- beta_j= ef. ppal del peso (columnas).  Constantes desconocidas
+- gamma_k= efecto de la pastilla (letra latina).  Constantes desconocidas
+- epsion=  resíduos. Se asume que siguen una $\epsilon_{ijk} \sim N(0,\sigma^2)$
+
+
+```{r}
+y=c(43,57,61,74,
+    59,63,75,46,
+    65,79,48,64,
+    83,55,67,72) # prolongación del sueño (respuesta)
+filas=as.factor(rep(1:4,each=4))
+# filas # presión
+col=as.factor(rep(1:4,4))
+# col # peso
+letra = as.factor(c(1,2,3,4,2,3,4,1,3,4,1,2,4,1,2,3)) # las pastillas
+```
+
+
+
+## Efectos de las pastillas  (letra latina)
+
+
+```{r}
+summary(aov(y~filas+col+letra))
+```
+
+
+p-valor 
+conclusiones
+
+- Contraste deigualdad de efectos de las pastillas: $H_0: \gamma_1=\gamma_2=\gamma_3=\gamma_4 \quad H_1: \exists \space i\neq j \space  |  \space \gamma_i \neq \gamma_j \quad \text{ para algún } i,j=1,2,3,4$
+
+
+
+    - p-valor: $5.03 \dot 10^{-09} < 0.05$ (rechazo)
+    - Conclusión: No existen diferencias significativas para aceptar que las pastillas tienen todas el mismo efecto en la prolongación del sueño de las personas, al menos dos pastillas afectan de forma distinta
+
+Comparaciones múltiples
+
+```{r}
+comp = SNK.test(y,trt = letra, 6	, 0.4 	)
+comp$groups
+```
+
+Las 4 pastillas afectan de forma diferente al sueño.
+
+
+
+
+
+
+
+
+
+
+
+## ¿Es razonable considerar los grupos peso y presión sanguínea?
+
+### Para el peso (columnas):
+
+
+```{r}
+summary(aov(y~filas+letra+col)) # misma tabla de antes
+
+```
+
+
+p-valor 
+conclusiones
+
+- Contraste de igualdad de efectos del peso (col): $H_0: \beta_1=\beta_2=\beta_3=\beta_4 \quad H_1: \exists \space i\neq j \space  |  \space \beta_i \neq \beta_j \quad \text{ para algún } i,j=1,2,3,4$
+
+
+
+    - p-valor: $0.0493 * < 0.05$ (rechazo, pero está muy próximo)
+    - Conclusión: No existen diferencias significativas para aceptar que el los cuatros grupos de peso tienen todas el mismo efecto en la prolongación del sueño de las personas, al menos dos grupos de peso inciden de forma distinta
+
+El peso afecta de la misma forma, no incide en el sueño. El p-valor estaba al límite
+
+
+
+```{r}
+comp = SNK.test(y,trt = col, 6	, 0.4 	)
+comp$groups
+```
+
+Para un nivel de significación del 5% no conseguimos hacer diferencias, y concluímos que todos los pesos tienen el mismo efecto en la prolongación del peso de las personas. vamos a ver si con un 10%  conseguimos encontrar diferencias.
+
+```{r}
+comp = SNK.test(y,trt = col, 6	, 0.4, alpha=0.1 	)
+comp$groups
+```
+
+
+Vemos que existen dos grupos de pesos que afectan de manera significativamente diferente al sueño. Los pesos 4 y 2 afectan de manera significativamente igual y 123 también.
+
+
+
+
+
+
+### Para el la presión(filas):
+
+
+```{r}
+summary(aov(y~letra+col+filas)) # misma tabla de antes
+
+```
+
+
+p-valor 
+conclusiones
+
+- Contraste de igualdad de efectos del los niveles de presión sanguínea (filas): $H_0: \alpha_1=\alpha_2=\alpha_3=\alpha_4 \quad H_1: \exists \space i\neq j \space  |  \space \alpha_i \neq \alpha_j \quad \text{ para algún } i,j=1,2,3,4$
+
+
+
+    - p-valor: $1.77 * 10^{-6} < 0.05$ (rechazo)
+    - Conclusión: No existen diferencias significativas para aceptar que el los cuatros grupos de presión tienen todas el mismo efecto en la prolongación del sueño de las personas, al menos dos grupos de presión inciden de forma distinta
+
+```{r}
+comp = SNK.test(y,trt = filas, 6	, 0.4)
+comp$groups
+```
+
+
+La presión incide de forma distina
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Ejercicio 3. ANCOVA con 1 factor y una covariante
+
+
+
+
+
+
+# Modelo. ¿Es adecuado?
+
+Leemos los datos
+
+```{r}
+library(dplyr)
+(moscas <- read.table("moscas.txt",header = TRUE)) %>% head()
+```
+
+```{r}
+z<-moscas$torax
+y<-moscas$longevidad
+a<-as.factor(moscas$condicion)
+levels(a)
+nrow(moscas[moscas$condicion=="G1",]) # 24 ensayos en cada condición
+nrow(moscas[moscas$condicion=="G2",])
+nrow(moscas[moscas$condicion=="G3",])
+nrow(moscas[moscas$condicion=="G4",])
+nrow(moscas[moscas$condicion=="G5",])
+```
+
+Se trata de un modelo ANCOVA de un factor y una covariante. 
+
+\[Y_{ij}= \mu + \alpha_i + \beta_j + \gamma Z_{ij} + \epsilon_{ij} \quad i=1,\dots,a=5 ; j=1,\dots,b=25
+\]
+N=abn 27
+
+Donde:
+
+- Yijk= longevitud de la k-ésima mosca 
+- mu= longevidad media de todas las moscas
+- alpha_i= efecto del i-ésimo nivel de condición ambiental 
+- z_ij=se trata de la longitud del torax de la mosca iésima
+- Z: es el efecto de la covariante ( efecto de la lonfitud del tórax)
+- epsion=  resíduos, se asumen iidde una ley $N(0,\sigma^2)$
+
+
+Para ver si se trata de un modelo adecuado, planteamos el contraste de hipótesis de paralelismo, en la que el modelo asuma que el efecto producido por la covariante es el mismo para todas las combinaciones de niveles de los factores.
+
+
+Contraste: $H_0: \gamma_1=\gamma_2=\gamma_3 \quad H_1: \exists \space i\neq j \space  |  \space \gamma_i \neq \gamma_j \quad \text{ para algún } i,j=1,2,3,$
+
+
+```{r}
+plot(z,y,col=c("green","blue","red","black","orange")[a],lwd=2,pch=15+as.numeric(a))
+#si queremos incluir las rectas de regresion para cada grupo
+abline(lm(y[a=="G1"]~z[a=="G1"]), col="green")
+abline(lm(y[a=="G2"]~z[a=="G2"]), col="blue")
+abline(lm(y[a=="G3"]~z[a=="G3"]), col="red")
+abline(lm(y[a=="G4"]~z[a=="G4"]), col="black")
+abline(lm(y[a=="G5"]~z[a=="G5"]), col="orange")
+```
+Se ve que las rectas son paralelas, salvo la verde y la roja, condiciones 1 y 3, parece que la azul tampoco.
+
+```{r}
+modelo <- lm(y~a*z)
+anova(modelo)
+```
+
+
+- p-valor del contraste: 0.9947 (acepto)
+- Conclusión: No hay evidencias en contras de la hipótesis de paralelismo
+se verifica la hipótesis de paralelismo y el modelo es adecuado. Significativamente, no existen evidencias en contra de que el coeficiente de la covariante sea diferente 
+
+
+
+## ¿Afecta la longitud del tórax en la longevidad de las moscas?
+
+
+Contraste de no efecto de la covariante: $H_0: \Gamma = 0 \quad H_1: \Gamma \neq 0$
+
+```{r}
+summary(lm(y~a+z) )
+
+# anova(lm(y~a+z),lm(y~a)) same
+```
+
+- p-valor:  < 2e-16 < alpha = 0.05 (rechazo)
+- Conclusión: No existen evidencias significativas para afirmar que la longitud del tórax no afecte en la longevidad de las moscas.
+
+# Igualdad de efectos de la condición ambiental
+
+
+Contraste: $H_0: \alpha_1=\alpha_2=\alpha_3 = \alpha_4 = \alpha_5 \quad H_1: \exists \space i\neq j \space  |  \space \gamma_i \neq \gamma_j \quad \text{ para algún } i,j=1,2,3,4,5$
+
+```{r}
+modelo2<-lm(y~z+a) 
+anova2<-anova(modelo2)
+anova2
+```
+
+Salida:
+
+- p-valor: 1.974e-13  < 0.05 = alpha (rechazo)
+- conclusión: No existen evidencias significativas para afirmar que los diferentes niveles de condición ambiental no afecten a la longevidad de las moscas, al menos dos niveles afectan de forma distinta.
+
+Compmúltiples:
+
+```{r}
+comp <- glht(aov(modelo2), linfct = mcp(a="Tukey"))
+summary(comp)
+```
+
+```{r}
+summary(comp, test=adjusted(type="Westfall") )
+```
+
+Si acepto, significativamente iguales
+
+Conclusiones: Existen tres grupos de condiciones ambientales:
+
+- Grupo 1: formado por los niveles de condición  1,2,3. No son significativamente distintos, es decir, afectan, significativamente, de la misma forma a la longevidad de las moscas
+- Grupo 2: la condición 4 
+- Grupo 3: la 5 
+
+
+ 
+Podrían pedirme IC 
+
+```{r}
+#calculo de intervalos de confianza
+mis.ic= confint(comp, level = 0.95)
+mis.ic
+```
+
+
+```{r}
+#representamos graficamente los intervalos de confianza
+ plot(mis.ic, main="intervalos de confianza", xlab=" ")
+```
+
+
+
+
+
+
+

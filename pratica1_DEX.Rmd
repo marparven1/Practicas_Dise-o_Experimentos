@@ -21,6 +21,8 @@ Del tema 2.
 
 # Ejemplo 1. Pollos
 
+En una granja se desea averiguar si las condiciones ambientales inciden en la ganancia de peso de los pollos. Para ello, se observó la ganancia de peso en una semana de 15 pollos en 3 condiciones ambientales, 5 pollos en cada una. Los resultados fueron
+
 A cada animal le hemos observado dos cosas, la variable respuesta y los niveles del factor
 
 
@@ -32,7 +34,7 @@ y<-c(100,115,95,99,105,115,98,97,93,95,98,105,105,110,94) # respuesta
 ```
 
 
-## Contraste
+## Contraste de igualdad de efecto de las condiciones ambientales
 
 El contraste que vamos a realizar es el siguiente (pag5) apuntes:
 
@@ -156,7 +158,11 @@ Los de R se pueden obtener de los nuestros restandole 1.2 a cada uno de ellos.
 
 # Ejemplo 2. Sucursales
 
-## Contraste
+En la siguiente tabla se muestran las ganancias netas (en millones de u.m.) referentes al año pasado, de una muestra aleatoria simple de las sucursales de cuatro entidades bancarias.
+
+Se pretende determinar si hay diferencias entre las ganancias medias de estas cuatro entidades bancarias.
+
+## Contraste de igualdad de efectos de las entidades bancarias
 
 
 ```{r}
@@ -166,7 +172,7 @@ a<-rep(c(1:4),5)
 a<-factor(a)
 ```
 
-Realizamos el contraste:
+Realizamos el contraste 
 
 $$
 \left\{
@@ -218,6 +224,7 @@ LSD = 0.5592694, cantidad a partir de la cual considero dos medias distintas.
 
 
 Observando la salida no se la intertpretacion, necesito mirarla. Vemos que la comparación correspondiente a las sucursales 1 y 3 es no significativa.
+Hay tres grupos de sucursales no significativamente distintas: 4,2 y 1 y 3.
 
 
 ### Test Scheffé
@@ -263,7 +270,9 @@ Misma conclusión que el test de Scheffé.
 #SNK.test(respuesta,factor, gl del error, CM_e)
 snk<-SNK.test(y,a,16,0.174)
 snk$groups
-snk
+snk$statistics
+snk$parameters
+snk$snk
 ```
 
 
@@ -440,6 +449,23 @@ summary(aov(ares~a))
 bartlett.test(y,a)
 ```
 
+# Ejemplo 5: Determinación de la potencia
+
+Supongamos un experimento con k = 5 tratamientos, donde el experimentador desear ́ıa rechazar la hipo ́tesis nula de igualdad de efectos con probabilidad 0.90 si las medias de los tratamientos fueran
+ En este caso: $\mu_1$ =11, $\mu_2$ =12, $\mu_3$ =15, $\mu_4$ =18, $\mu_5$ =19.
+
+```{r}
+power.anova.test(groups = 3, # número de grupos
+                 n=5, # número de observaciones
+                 between.var=15.2/5, # var entre grupos
+                 within.var=59.1,  # varianza de cada grupo
+                 sig.level=0.05 # nivel significación
+                 )
+
+power.anova.test(groups = 4, between.var = 1, within.var = 3,
+                 power = .80)
+# n = 11.92613
+```
 
 
 
@@ -708,9 +734,6 @@ summary(ejercicio2) # tabla de la varianza
 - P-valor = $0.00144 < \alpha = 0.05$, rechazo $H_0$, no tengo evidencias afirmar que los cuatro catalizadores tengan el mismo efecto sobre la concentración.
 
 ## Intervalo de confianza para el efecto medio del primer catalizador
-
-
-
 ## Si existiesen diferencias entre los efectos, estudie cuáles pueden ser los motivos de tales diferencias (comparaciones múltiples)
 
 
@@ -795,6 +818,9 @@ Grupos:
 
 - Catalizadores 1,2,3
 - Catalizadores 3 y 4
+
+
+
 
 
 

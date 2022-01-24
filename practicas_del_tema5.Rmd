@@ -1,0 +1,399 @@
+---
+output: html_document
+---
+## Problemas del tema 5
+
+**Ejemplo de diseño en bloques completos aleatorizados (Problema 1)**
+Un químico desea  probar el efecto de cuatro aditivos sobre la resistencia de un tipo particular de tela.
+Como puede haber diferencia entre los rollos de tela, decide realizar un diseño aleatorizado por bloques, considerando los rollos de tela como bloques. Selecciona 5 rollos y les aplica las 4 aditivos en orden aleatorio. Los resultados de resistencia se muestran en la tabla de abajo. Analiza los datos
+$$\begin{array}{rccccc}
+\hline
+\mbox{Rollo de tela:} & 1 & 2 & 3 & 4 & 5\\ \hline
+\mbox{Aditivo: }1 & 73 & 68 & 74 & 71 & 57\\
+2 & 73 & 67 & 75 & 72 & 70\\
+3 & 75 & 68 & 78 & 73 & 68\\
+4 & 73 & 71 & 75 & 75 & 69\\
+\hline
+\end{array}$$
+El modelo asociado es $$y_{ij}=\mu+\alpha_i+\beta_j +\varepsilon_{ij}\quad
+\begin{array}{l} i=1,2,\dots,t\\ j=1,2,\dots,b\\
+\varepsilon_{11}, \ldots, \varepsilon_{45} \quad \mbox{i.i.d. de una ley} \quad N(0, \sigma^2) \end{array}$$
+con $t=4$ (los tratamientos) y $b=5$ (los bloques).  
+
+```{r}
+y=c(73, 68, 74, 71, 57, 73, 67, 75, 72, 70, 75, 68, 78, 73, 68, 73, 71, 75, 75, 69)
+rollo=as.factor(rep(1:5, 4))
+aditi=as.factor(rep(1:4, each=5))
+summary(aov(y~rollo + aditi))
+```
+
+
+Estamos interesados en los aditivos, por lo que el contraste de intereés es:
+
+Para el contraste de igualdad de efectos del factor:
+$$\begin{array}{ll}
+H_0: & \alpha_1=\ldots=\alpha_4\\
+H_1: & \exists i \neq k \quad \mbox{ tales que } \quad \alpha_i \neq \alpha_k
+\end{array}$$
+Conclusión: el p-valor es 0.12981, por lo que no hay evidencias en contra de que los aditivos tengan igual efecto. 
+Conclusión: Tiene sentido hacer un diseño pr bloques, porque distintos rollos de tela pueden afectar de forma distinta al resultado.
+
+No tiene sentido hacer comparaciones múltiples, pero no tiene sentido, son bloques no factor.
+
+
+Para el contraste de igualdad de efectos de los rollos de tela, suponiendolos fijos (no hay interés en este contraste)
+$$\begin{array}{ll}
+H_0: & \beta_1=\ldots=\beta_5\\
+H_1: & \exists j \neq k \quad \mbox{ tales que } \quad \beta_j \neq \beta_k
+\end{array}$$
+el p-valor es  0.00202, por lo que podemos afirmar que hay diferencias entre los cinco rollos de tela empleados en el experimento
+
+En el modelo supuesto hemos asumido que los rollos de tela son fijos. Si los rollos de tela son seleccionados al azar de la población de rollos de tela, entonces el modelo es:
+ $$y_{ij}=\mu+\alpha_i+\beta_j +\varepsilon_{ij}\quad
+\begin{array}{l} i=1,2,\dots,t\\ j=1,2,\dots,b\\
+\beta_1, \ldots, \beta_5  \,\mbox{ i.i.d. de una ley }\, N(0, \sigma^2_\beta),\\
+\varepsilon_{11}, \ldots, \varepsilon_{45} \, \mbox{ i.i.d. de una ley } \, N(0, \sigma^2), \\
+\{\beta_1, \ldots, \beta_5\} \, \mbox{ y } \,
+\{\varepsilon_{11}, \ldots, \varepsilon_{45}\}
+\, \mbox{ incorreladas.} 
+\end{array}$$
+En este caso, el contraste de no efecto del bloque, es decir, de no efecto de los rollos de tela,  es
+$$\begin{array}{ll}
+H_0: & \sigma^2_\beta=0,\\
+H_1: & \sigma^2_\beta>0.
+\end{array}$$
+La tabla ANOVA es la misma que la obtenida para el caso en que los rollos de tela son fijos. Lo que cambia es la interpretación del resultado, que ahora es: el p-valor es  0.00202, por lo que podemos afirmar que el rollo de tela empleado incide en el resultado del experimento.
+
+Mientras que en el caso de ef fijos la conclusión es que hay dif entre los 5 rollos de tela empleados en el experimento, si el diseño dice que los rollos son seleccionados al azar de una posblación de rollos el p-valor es el mismo pero cambia la interpretación aquí la conclusión es: afirmar que el rollo de tela empleado incide en el resultado del experimento, cualquier rollo de tela de todos los existentes, en el otro caso la conclusión era para esos 5 rollos en concreto.
+
+
+**Ejemplo de diseño en cuadrado latino (Ejemplo en la sección 2)**
+Se desea comparar el rendimiento de 4 tipos de semillas de trigo, eliminando  en la comparación el efecto del tipo de insecticida y abono, para ello se 
+realizó un diseño en cuadrado latino. Los datos obtenidos se muestran en la siguiente tabla.
+$$\begin{array}{rlrlrlrlr}
+\hline
+\mbox{Abonos:} & \mbox{a1} & & \mbox{a2} & & \mbox{a3} & & \mbox{a1} & &\\ \hline
+\mbox{Insecticidas: $\quad$ i1} & 
+C & 7 & D & 8 & B & 4 & A & 3\\
+i2 &  B & 15 &  A & 16  & C & 18 &  D & 23\\
+i3  & D & 18  & C & 12  & A & 12 &  B & 10\\
+i4 & A & 14 & B & 13  & D & 16  & C & 14\\
+\hline
+\end{array}$$
+El modelo asociado es
+$$y_{ijk}=\mu + \alpha_i +\beta_j +\gamma_k +\varepsilon_{ijk} \quad
+1 \leq i,j \leq p, \quad k=k(i,j)$$
+donde
+
+   * $y_{ijk}$ es la observación correspondiente a la $i-$ésima fila,
+la $j-$ésima columna y la $k-$ésima  letra. 
+   * $\mu$ es la media global de todas las observaciones.
+   * $\alpha_i$ es el efecto de la $i-$ésima fila.
+   * $\beta_j$ es el efecto de la $j-$ésima columna.
+   * $\gamma_k$ es el efecto de la $k-$ésima letra latina.
+   * $\varepsilon_{ijk}$ es el error aleatorio. Supondremos que son i.i.d.
+$N(0,\sigma^2)$
+
+Estamos interesados en contrastar:
+Nos solicitan contrastar la igualdad de efectos de las semillas (de las letras latinas):
+No me interesa la = efectos del abono ni del trigo
+$$\begin{array}{ll}
+H_0: & \gamma_1=\gamma_2=\gamma_3=\gamma_4,\\
+H_1: & \exists i \neq v \quad\mbox{tal que}\quad \gamma_i \neq \gamma_v.
+\end{array}$$
+
+
+
+```{r}
+y=c(7,8,4,3,15,16,18,23,18,12,12,10,14,13,16,14)
+insect=as.factor(rep(1:4, each=4))
+abono=as.factor(rep(1:4,4))
+trigo=as.factor(c(3,4,2,1,2,1,3,4,4,3,1,2,1,2,4,3))
+summary(aov(y~insect + abono + trigo))
+```
+El p-valor para el contraste de igualdad de efectos de las semillas (igualdad del efecto letra latina), eliminando en la comparación el efecto del tipo de insecticida y abono, es 0.007052, de donde se concluye que las semillas no tiene igual efecto. Pasamos a hacer comparaciones múltiples para intentar averiguar qué semillas difieren (porqué he rechazado) :
+```{r,  message=FALSE, warning=FALSE}
+library(agricolae)
+#SNK.test(respuesta,factor, gl del error, CM_e)
+sal=SNK.test(y,trigo, 6,  2.31)
+sal$groups
+```
+
+Hemos rechazado porque hay dos grupos de semillas que son significativamente distintas: {1,2,3} y {4}.
+
+Con respecto a la igualdad de efectos secundarios, el ef insecticida y el efecto abono (fila y col)
+Insecticida tiene efecto sobre la respuesta y abono no tiene efecto sobre la respuesta. Para posteriores estudios no considerar el abono porque no tiene efecto en la variable respuesta.
+
+**Ejemplo de diseño BIB (Ejemplo en la sección 3)**
+Un ingeniero químico cree que el tiempo de reacción en un proceso químico depende del
+catalizador empleado. Se investigan 4 catalizadores (El factor de interés son los catalizadores). Debido a que las variaciones en  los lotes de materia prima pueden afectar al comportamiento del catalizador, el ingeniero decide controlar este factor por medio de bloques. Sin embargo, cada lote sólo permite el ensayo de tres catalizadores, por lo que se realizó un DBIB, obteniéndose los siguientes resultados:
+$$\begin{array}{rccc}
+\hline
+\mbox{Bloques(lotes de materia prima):} & 1  &  2  & 3 &  4\\
+\hline
+\mbox{Tratamiento (catalizador):} \quad 1 & 73 & 74 &  - &  71\\
+  2 &  -  & 75 &  67  & 72 \\
+  3 & 73  & 75 &  68  & - \\
+  4 & 75  & -  &  72  & 75 \\
+  \hline \end{array}$$
+
+Tengo que comprobar que es un BIB:
+
+   - Cada tratamiento se ensaya en cada bloque una vez como máximo
+   - Cada par de tratamientos aparecen juntos el mismo número de veces
+Es un diseño simétrico, el número de tratamientos y bloques es el mismo. 
+
+El modelo asociado a un diseño BIB es
+$$y_{ij}=\mu+\alpha_i+\beta_j +\varepsilon_{ij}\quad \mbox{ si
+$n_{ij}=1$ } \quad
+\begin{array}{l} i=1,2,\dots,t\\ j=1,2,\dots,b \\ \varepsilon_{ij} \mbox{ i.i.d. }N(0,\sigma^2) \end{array}$$
+con $t=b=4$ y donde
+ $n_{ij}$ vale 1 si el tratamiento $i$ es ensayado en el bloque $j$, y vale 0  en caso contrario.
+
+
+
+Se pide contrastar la igualdad de efectos de los catalizadores (tratamentos):
+$$\begin{array}{ll}
+H_0: & \alpha_1=\alpha_2=\alpha_3=\alpha_4,\\
+H_1: & \exists i \neq v \quad\mbox{tal que}\quad \alpha_i \neq \alpha_v. \end{array}$$
+
+Para este diseño BIB es $t=b=4$, $\lambda=2$ y $r=k=3$.
+
+
+Para el analisis de DBIB(existen 3 maneras), incluyendo comparaciones multiples de tratamientos, podemos utilizar  la siguiente función de la librería agricolae:
+$$\mbox{ BIB.test(bloque,tratamiento,respuesta,test="tukey")}$$
+
+
+Forma 1:
+
+
+```{r,  message=FALSE, warning=FALSE}
+library(agricolae)
+y=c(73,74,71,75,67,72,73,75,68,75,72,75)
+tra=as.factor(rep(1:4, each=3))
+blo=as.factor(c(1,2,4,2,3,4,1,2,3,1,3,4))
+ejemplo2=BIB.test(blo,tra,y,test="tukey", console=TRUE) # El orden es muy importante
+# Sólo aplica TUKEY
+```
+
+Salida:
+
+- Parameters BIB (parámetros del diseño)
+
+      - Lambda     : 2
+      - treatmeans : 4
+      - Block size : 3
+      - Blocks     : 4
+      - Replication: 3 
+
+- Tabla ANOVA:
+
+Response: y
+            Df Sum Sq Mean Sq F value   Pr(>F)   
+block.unadj  3  55.00 18.3333  28.205 0.001468 ** # No creer este renglon 
+trt.adj      3  22.75  7.5833  11.667 0.010739 * 
+Residuals    5   3.25  0.6500                    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Avisa que los bloques NO están ajustados (no me lo creo, ese renglón lo tiro) y que los tratamientos sí: block.unadj ,trt.adj  
+
+
+Rechazo hup nula: p-valor 0.001468 **. Es interesante saber porque rechazo la igualdad de efectos de los catalizadores. Comparaciones múltiples:
+
+ Comparison between treatments means
+       Difference pvalue sig.
+ 1 - 2     -0.250 0.9825     
+ 1 - 3     -0.625 0.8085     
+ 1 - 4     -3.625 0.0130    *
+ 2 - 3     -0.375 0.9462     
+ 2 - 4     -3.375 0.0175    *
+ 3 - 4     -3.000 0.0281    *
+
+Rechazo porque hay dos grupos de catalizadores:
+
+Medias por grupos: 72.66667 (media trat i, ¡¡no es estiamdor insesgado!!)  71.375 (mugorro + alfai)
+
+Hemos rechazado porque hay dos grupos de catalizadores que son significativamente distintas: {1,2,3} y {4}.
+
+Alternativamente, la forma 2:
+
+```{r}
+bib=lm(y~blo+tra) #El último (tratamientos) lo ajusta bien en la tabla ANOVA
+# Esto es por ser un diseño no balanceado
+# Para los bloques no miro nada, lo tiro a la basura
+anova(bib)
+```
+
+No avisa  que los bloques NO están ajustados y que los tratamientos sí: block.unadj ,trt.adj  
+
+
+Si quisiera comparar la = efectos de los bloques, 2 alternativas:
+
+- 1. Proceder bib=lm(y~tra+bloq) y el bueno son los bloques
+- 2. Ajusto el modelo completo y modelo sin bloques y comparo la tabla anova (forma 3)
+
+
+
+Si no nos acordamos del orden, forma 3 (la más sencilla para Marilo):
+
+```{r}
+bib=lm(y~blo+tra)  # ajusto el modelo completo
+bib.sin.tra=lm(y~blo) # ajusto el modelo sin el efecto cuya nulidad se quiere contrastar (ajusto el modelo bajo H0, que no hay efecto tratamiento)
+anova(bib, bib.sin.tra) # la Función anova se encarga de comparar ambos modelos.
+```
+
+
+El p-valor para el contraste de igualda de efectos de los catalizadores es 0.010739, y por tanto concluimos que tienen distinto efecto. Pasamos a hacer comparaciones múltiples para intentar averiguar qué catalizadores difieren:
+
+```{r,  message=FALSE, warning=FALSE}
+library(multcomp)
+mis.cm=glht(bib, # modelo completo
+            linfct=mcp(tra="Tukey") # aplicar COMP MULT con M.Tukey para la vble tratamiento
+            )
+summary(mis.cm)
+#Procedimeinto step-down, para hacerlo menos conservativo
+summary(mis.cm, test = adjusted(type = "Westfall"))
+```
+
+Mismas comparaciones que antes.
+
+Hay dos grupos de catalizadores que son significativamente distintos: {1,2,3} y {4}.
+
+
+Si quisiera comparar la = efectos de los bloques, 2 alternativas:
+
+- 1. Proceder bib=lm(y~tra+bloq) y el bueno son los bloques
+- 2. Ajusto el modelo completo y modelo sin bloques y comparo la tabla anova (forma 3)
+
+
+
+```{r}
+bib.bloque=lm(y~tra+blo) #El último (bloques) lo ajusta bien en la tabla ANOVA
+# Esto es por ser un diseño no balanceado
+# Para los tratamientos no miro nada, lo tiro a la basura
+anova(bib.bloque)
+```
+
+3 66.083 22.0278 33.8889 0.0009528 *** esto es bueno, es válido.
+p-valor: 0.0009528 rechazo la igualdad de efectos
+Los bloques inciden. Tiene sentido el diseño por bloques.
+
+
+
+```{r}
+bib=lm(y~tra+blo)  # ajusto el modelo completo
+bib.sin.blo=lm(y~tra) # ajusto el modelo sin el efecto cuya nulidad se quiere contrastar (ajusto el modelo bajo H0, que no hay efecto tratamiento)
+anova(bib, bib.sin.blo) # la Función anova se encarga de comparar ambos modelos.
+```
+
+
+Conclusión: los bloques inciden en la variabilidad del experimento.
+
+
+**Ejemplo de diseño en cuadrado grecolatino. Ejemplo 3**
+ El rendimiento de un proceso qu ́ımico se puede ver afectado con el uso de 5 tipos de materias primas, 5 concentraciones de  ́acido, 5 tiempos de permanencia (A, B, C, D, E), y cinco tipos de concentraciones de catalizadores (α, β, δ, γ, ε). Para ello se realiza un disen ̃o greco-latino, obteni ́endose los datos de la siguiente tabla:
+
+
+$$\begin{array}{rlrlrlrlr}
+\hline
+\mbox{Conc Ácido:} & \mbox{a1} & & \mbox{a2} & & \mbox{a3} & & \mbox{a1} & &\\ \hline
+\mbox{Materias primas: $\quad$ i1} & 
+      A 26 & B 16 & C 19 & D 16 & E 12 \\
+i2 &  B 18 & C 21 & D 18 & E 11 & A 21  \\
+i3  & C 20 & 18  & C & 12  & A & 12 \\
+i4 &  D 15 & 14 & B & 13  & D & 16  \\
+i5 &  E 10 & 14 & B & 13  & D & 16  \\
+\hline
+\end{array}$$
+El modelo asociado es
+$$y_{ijk}=\mu + \alpha_i +\beta_j +\gamma_k + \nu_l +  \varepsilon_{ijk} \quad
+1 \leq i,j \leq p, \quad k=k(i,j,l)$$
+donde
+
+   * $y_{ijk}$ es la observación correspondiente a la $i-$ésima fila,
+la $j-$ésima columna y la $k-$ésima  letra. 
+   * $\mu$ es la media global de todas las observaciones.
+   * $\alpha_i$ es el efecto de la $i-$ésima fila.
+   * $\beta_j$ es el efecto de la $j-$ésima columna.
+   * $\gamma_k$ es el efecto de la $k-$ésima letra latina.
+   * $\nu_l$ es el efecto producido por el $l-$ésimo nivel del factor letra griega.
+   * $\varepsilon_{ijk}$ es el error aleatorio. Supondremos que son i.i.d. $N(0,\sigma^2)$
+ 
+
+
+Estamos interesados en contrastar (igualdad de efecto de los catalizadores):
+
+
+
+```{r}
+y=c(26,16,19,16,13,18,21,18,11,21,20,12,16,25,13,15,15,22,14,17,10,24,17,17,14)
+matPri=as.factor(rep(1:5, each=5))
+concAcido=as.factor(rep(1:5,5))
+tiempo_per=as.factor(c(1,2,3,4,5,2,3,4,5,1,3,4,5,1,2,4,5,1,2,3,5,1,2,3,4))
+concCatalizador = as.factor(c(1,2,4,3,5,4,3,5,1,2,5,1,2,4,3,2,4,3,5,1,3,5,1,2,4))
+summary(aov(y~matPri + concAcido + tiempo_per+ concCatalizador))
+```
+
+p-valor:  0.728900. Acepto $H_0$. No hay diferencias significativas.
+
+
+Ejercicio 5.
+
+Contraste de interés: igualdad de efectos de los tratamientos (aditivos)
+
+
+```{r,  message=FALSE, warning=FALSE}
+library(agricolae)
+y=c(17,14,13,12,14,14,13,10,12,13,12,9,13,11,11,12,11,12,10,8)
+tra=as.factor(rep(1:5, each=4)) # aditivo
+blo=as.factor(c(2,3,4,5,1,2,4,5,1,3,4,5,1,2,3,4,1,2,3,5)) # vehiculo
+ejemplo2=BIB.test(blo,tra,y,test="tukey", console=TRUE) # El orden es muy importante
+# Sólo aplica TUKEY
+```
+
+```{r}
+bib=lm(y~blo+tra) #El último lo ajusta bien en la tabla ANOVA
+anova(bib)
+```
+
+
+ 4 35.733  8.9333  9.8103 0.001247 **
+Rechazo la igualdad de efectos de los aditivos. El p-valor para el contraste de igualda de efectos de los aditivos es 0.001247, y por tanto concluimos que tienen distinto efecto. Pasamos a hacer comparaciones múltiples para intentar averiguar qué catalizadores difieren:
+
+```{r}
+bib=lm(y~blo+tra) 
+bib.sin.tra=lm(y~blo) 
+anova(bib, bib.sin.tra)
+```
+
+
+```{r}
+library(multcomp)
+mis.cm=glht(bib, linfct=mcp(tra="Tukey"))
+summary(mis.cm)
+```
+
+```{r}
+summary(mis.cm, test = adjusted(type = "Westfall"))
+```
+
+
+Conclusión: 
+
+1	14.25000	a		
+2	12.78333	ab		
+3	11.85000	bc		
+4	11.11667	bc		
+5	10.25000	c
+
+Hay 3 grupos solapados de aditivos.
+
+
+```{r}
+## Muy mal hecho, así no. ¡¡!!
+sal=SNK.test(y,tra, 11, 0.9106    )
+sal$groups # Sale igual que con Tukey por casualidad
+# Los estimadores son las medias muestrales, no son insesgados
+```
+

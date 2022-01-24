@@ -1,0 +1,702 @@
+---
+title: "Prácticas del Tema 3"
+output:
+  html_document: default
+  pdf_document: default
+---
+**EJEMPLO 1.**  Se piensa que la vida de una
+herramienta de corte está afectada por la velocidad y el
+ángulo de corte. Se seleccionan tres velocidades y tres
+ángulos, realizándose un experimento factorial con dos
+réplicas. Los datos son ($y_{ijk}$=valor observado-constante)
+\[
+\begin{array}{cc}
+\mbox{Ángulos} & \mbox{ Velocidad de corte (in/min)}\\
+ \begin{array}{c}  \\ 15^o \\ 20^o \\ 25^o\end{array} &
+ \begin{array}{|rcr|rcr|rcr|}
+ \hline
+ & 125 & &  & 150 & & & 175 & \\ \hline
+ -2 & & -1 & -3  & &  0  &  2  & &  3\\ \hline
+ 0  & &  2 & 1  & &    3 & 4  & &  6 \\ \hline
+ -1  & &  0 & 5  & &  6 & 0 & &  -1 \\ \hline
+ \end{array}\end{array}
+\]
+
+Todos los ángulos se prueban en todas las velocidades, los factores angulo y velocidad están cruzados.
+
+
+
+```{r}
+y=c(-2,-1,-3,0,2,3,0,2,1,3,4,6,-1,0,5,6,0,-1)
+ang=c(rep(15,6), rep(20,6), rep(25,6))
+vel=rep(c(125,125,150,150,175,175),3)
+ang=as.factor(ang)
+vel=as.factor(vel)
+ejemplo1=aov(y~ang*vel)  # o equivalentemente ejemplo1=aov(y~ang+vel+ang:vel)
+summary(ejemplo1)
+#Cuando tenemos factores cruzados, lo primero que tenemos que hacer es mirar la
+#interacción.
+```
+
+```{r}
+ejemplo11=aov(y~vel*ang)  # o equivalentemente ejemplo1=aov(y~ang+vel+ang:vel)
+summary(ejemplo11)
+
+ejemplo12=aov(y~vel+ang+vel:ang)
+summary(ejemplo12)
+```
+
+
+NOTA: Como existe interacción entre los factores, no tiene sentido realizar los contrastes de igualdad de efecto principal de los factores por separado, ya que el efecto de los factores no se suma.
+
+Contraste de igualdad no efecto de la interacción: $H_0: \sigma_{\alpha\beta}=0$
+
+- pvalor: 0.00184 ** Rechazo el contraste de no efecto.
+Como la interacción es significativamente no nula, comparamos las $3\times 3=9$ celdillas correspondientes a las combinaciones de los tratamientos de ambos factores (comparaciones múltiples):
+
+
+
+```{r}
+snk=agricolae::SNK.test(y,ang:vel,9,1.444)
+snk$groups
+#Tenemos dos grupos solapados de celdillas.
+```
+
+La existencia de interacción puede comprobarse gráficamente utilizando el gráfico de interacción:
+```{r}
+#interaction.plot(x.factor, trace.factor, response, fun = mean,...)
+#x.factor: factor que queremos que represente en el eje X
+#fun: función que queremos que represente
+
+interaction.plot(ang, vel, y)
+```
+NOTA: En ausencia de interacción, las lineas serían aproximadamente paralelas.
+Si aparecieran gráficos donde no lo son, (bastaría con que una no se cumpliese una linea) indicaría presencia de interacción.
+
+Si no lo vemos claro de una forma, lo ponemos al revés:
+
+```{r}
+interaction.plot(vel,ang, y)
+```
+
+
+**PROBLEMA 1.** Para analizar el efecto de diferentes concentraciones de fosfato en un
+fertilizante (factor $B$) sobre la producción  de dos tipos de
+habichuelas (factor $A$), se ha realizado un experimento
+obteniéndose los siguientes resultados:
+$$\begin{array}{ll}
+\mbox{factor $A$:} & A_1 \, \mbox{tipo I}\\
+                   & A_2 \, \mbox{tipo II}\\
+\mbox{factor $B$:} & B_1 \, \mbox{no fosfatos}\\
+                   & B_2 \, \mbox{10\% por unidad}\\
+                   & B_3 \, \mbox{30\% por unidad}\\
+\end{array}
+\qquad \qquad \qquad
+\begin{array}{c|cccc|cccc|}
+ &  & A_1 & &  & & A_2  \\
+\hline
+B_1 & 15 & 17 & 14 & 16 & 13 & 9 & 8 & 12 \\
+B_2 & 18 & 19 & 20 & 21 & 17 & 19 & 18 & 18\\
+B_3 & 22 & 29 & 31 & 35 & 18 & 22 & 24 & 23 \\
+\hline
+\end{array}$$
+
+NOTA: Modelo con 2 factores fijos cruzados (fator A: tipo de semilla, 2 niveles, a=2) (factor B: tipo de fertilizantes, 3 niveles, b=3) con n=4 replicas del experimento.
+
+Extrae conclusiones.
+```{r}
+y=c(15,17,14,16,13,9,8,12,18,19,20,21,17,19,18,18,22,29,31,35,18,22,24,23)
+A=rep(c(1,1,1,1,2,2,2,2),3)
+B=c(rep(1,8),rep(2,8),rep(3,8))
+A=as.factor(A)
+B=as.factor(B)
+problema1=aov(y~A*B)
+summary(problema1)
+```
+NOTA: 
+Para el contraste de no iteración, el p-valor=0.122865. Por tanto, no hay evidencias en contra de la no interacción. Por tanto nos quedaremos con un modelo aditivo.
+Ahora si tiene sentido leer los contrastes sobre los efectos principales.
+
+7.69. Aproximadamente la desviación típica 1.5
+Dudoso: el intervalo +-3 aprox, por tanto...????
+
+Para el contraste de igualdad de efectos: p-valor=0.000642. Podemos afirmar que los dos tipos de semilla tienen distinto efecto sobre la respuesta (producción).
+
+Los fertilizantes no tienen el mismo efecto sobre la producción.
+
+Gráfico de interacción:
+
+```{r}
+#interaction.plot(x.factor, trace.factor, response, fun = mean,...)
+interaction.plot(A,B, y)
+```
+NOTA: Observamos que no son totalmente paralelas pero no se cruzan. 
+Son medias de 4 observaciones, lo que nos aporta una gran variabilidad muestral, y por eso no se ve tan claro.
+
+El test dice que la podemos suponer paralelas.
+
+Vamos a hacer el otro a ver si se ve más claro (en el examen solo tenemos que poner una gráfica):
+
+```{r}
+#interaction.plot(x.factor, trace.factor, response, fun = mean,...)
+interaction.plot(B,A, y)
+```
+No tienen una forma radicamente distintas, por lo que no podemos rechazar (esto vuelve a pasar por tener tan solo 4 observaciones)
+
+
+Rechazo para ambos factores el contraste de igualdad de efectos del factor A y de B. Los niveles de cada factor actúan difrerente.
+
+
+Comparaciones múltiples para los niveles de B (para A  no es necesario porque sólo tiene dos niveles):
+
+```{r}
+snk=agricolae::SNK.test(y,B,18,7.69)
+#18 son los grados de libertad
+snk$groups
+```
+NOTA: hemos rechazado porque cada uno de los grupos de los tres fertilizantes tienen un efecto distinto.
+
+
+
+**PROBLEMA 2.** Considérese un experimento con dos factores $A$ y $B$, y con dos niveles cada
+factor, $A_1, A_2$ y $B_1, B_2$. Analiza en cada caso el modelo
+adecuado (aditivo o completo)
+ \[(a)\,\,\, \begin{array}{|c|c|c|} 
+ \hline
+    & B_1 & B_2 \\ \hline
+ A_1 & 10 & 30\\ \hline
+ A_2 & 20 & 40 \\\hline
+\end{array} \quad \quad  
+(b)\,\,\, \begin{array}{|c|c|c|} 
+ \hline
+    & B_1 & B_2 \\ \hline
+ A_1 & 10 & 30\\ \hline
+ A_2 & 20 & 70 \\\hline
+\end{array}\]
+
+NOTA: Está sobreparametrizado -> La suma de cuadrados debido al error da 0.
+
+```{r}
+#(a)
+y<-c(10,30,20,40)
+a<-c(rep(1,2),rep(2,2))
+b<-rep(c(1,2),2)
+a<-factor(a)
+b<-factor(b)
+#interaction.plot(x.factor, trace.factor, response, fun = mean,...)
+interaction.plot(a,b,y)
+```
+Podríamos suponer que el modelo es aditivo, pues hay paralelismo.
+
+Vamos a hacer el otro gráfico:
+```{r}
+interaction.plot(b,a,y)
+```
+Modelo aditivo.
+
+```{r}
+#(b)
+y<-c(10,30,20,70)
+a<-c(rep(1,2),rep(2,2))
+b<-rep(c(1,2),2)
+a<-factor(a)
+b<-factor(b)
+#interaction.plot(x.factor, trace.factor, response, fun = mean,...)
+interaction.plot(a,b,y)
+```
+```{r}
+interaction.plot(b,a,y)
+```
+
+No está claro el modelo.
+NOTA: Tan solo tenemos una observación por celdilla, hay una gran variabilidad. 
+
+
+**PROBLEMA 3.**  Para comparar cuatro dietas distintas, se alimentaron 20 cerdos
+distribuidos por igual en 5 condiciones ambientales diferentes.
+A cada una de estas condiciones se asignó al azar un tipo de dieta
+diferente, obteniéndose las siguientes ganancias en peso
+\[
+\begin{array}{lcccc}
+            & \mbox{Dieta 1} & \mbox{Dieta 2} & \mbox{Dieta 3} & \mbox{Dieta 4} \\
+\mbox{Condición 1} & 1,08 & 1,58 & 2,05 & 3,66 \\
+\mbox{Condición 2} & 2,68 & 1,98 & 1,85 & 5,44 \\
+\mbox{Condición 3} & 4,04 & 3,88 & 3,59 & 4,30 \\
+\mbox{Condición 4} & 3,98 & 3,59 & 5,31 & 7,21 \\
+\mbox{Condición 5} & 5,66 & 5,93 & 6,80 & 4,94
+\end{array}\]
+
+NOTA: Diseño con dos factores fijos y cruzados (en todas las condiciones ambientales son probadas todas las dietas), factor A (Dietas) 4 niveles, factor B (condiciones ambientales) 5 niveles, con una observación por cada celdilla. 
+
+Por tanto la suma de cuadrados debido al error nos va a dar cero, y para poder analizarlo vamos a tener que usar obligatoriamente un modelo aditivo, pero debemos ver que sea adecuado. Para ello usaremos la gráfica de interacción.
+
+```{r}
+y<-c(1.08, 1.58, 2.05, 3.66, 2.68, 1.98, 1.85, 5.44, 4.04, 3.88, 3.59, 4.30, 3.98, 3.59, 
+     5.31, 7.21, 5.66, 5.93, 6.80, 4.91)
+dieta<-rep(c(1:4),5)
+cond<-c(rep(1,4),rep(2,4),rep(3,4),rep(4,4),rep(5,4))
+dieta<-factor(dieta)
+cond<-factor(cond)
+interaction.plot(cond,dieta,y)
+```
+
+```{r}
+interaction.plot(dieta,cond,y)
+```
+No es radicalmente distinto, pero tenemos nuestras dudas. Igualmente lo tenemos que analizar como aditivo, porque no tenemos otra opción.
+
+Lo analizaremos como aditivo:
+```{r}
+sal<-aov(y~dieta+cond) #tenemos que poner +
+summary(sal)
+```
+NOTA: En este modelo, 
+
+```{r}
+sal2<-aov(y~cond+dieta)
+summary(sal2)
+```
+
+
+Contraste de igualdad de efectos de las condiciones ambientales
+
+- p-valor: 0.00185 **: rechazlo la igualdad de efectos
+
+Contraste de igualdad de efectos de las dietas
+
+- p-valor: 0.0815: acepto la igualdad de efectos de las dietas
+
+
+Comparaciones múltiples para los niveles de dieta y cond:
+```{r}
+snk.dieta=agricolae::SNK.test(y,dieta,12,1.082)
+snk.dieta$groups
+```
+Como era de esperar NO se detectan diferencias significativas entre las medias para $\alpha=0.05$, que es el valor de $\alpha$ que tiene por defecto. Pongamos $\alpha=0.10$
+
+NOTA: Es posible que aunque fuesen el mismo alpha, se diese el caso aue saliesen todos del mismo grupo, a pesar de que con dicho alpha se rechazase el contraste de igualdad de efectos de las dietas. Esto se debe a que comparaciones múltiples es mucho menos potente que el test ANOVA.
+
+```{r}
+snk.dieta=agricolae::SNK.test(y,dieta,12,1.082, alpha=0.1)
+snk.dieta$groups
+snk.cond=agricolae::SNK.test(y,cond,12,1.082)
+snk.cond$groups
+```
+Para dieta: Si me interesa que la respuesta sea pequeña, cogería uno de los tres, porque no hemos detectado diferencias.
+
+Para condiciones: No son iguales porque hay dos condiciones (tenemos dos grupos de condiciones solapados). La 3,4,5 no son significativamente distintas, y la 1,2,3 no son significativamente distintas (es decir, no tengo evidencias para decir que sean distintas)
+
+**EJEMPLO 2.** Generamos datos de un modelo aditivo con ambos factores aleatorios con el siguiente código:
+
+
+
+```{r}
+set.seed(12345)
+eps=rnorm(125) #los epsilon ~ N(0,1)
+mu=3
+alpha=rnorm(5)*2 #los niveles de A ~ N(0,4)
+alpha=rep(alpha,25)
+a=as.factor(rep(1:5,25))
+beta=rnorm(5)/2 #los niveles de B ~ N(0,1/4)
+beta=rep(rep(beta, each=5),5)
+b=as.factor(rep(rep(1:5, each=5),5))
+y=mu+alpha+beta+eps #modelo aditivo
+```
+y los analizamos con R:
+```{r}
+ejemplo2.aleato=aov(y~Error(a*b)) #también puede escribirse ex1=aov(y~1+Error(a*b))
+summary(ejemplo2.aleato) #no hace contrastes sobre los efectos aleatorios
+```
+
+
+
+
+
+
+
+Podemos calcular los p-valores "a mano":
+
+$$
+\left\{
+\begin{array}{ll}
+H_{0}: &  \sigma_{\alpha\beta}^2 = 0\\
+H_{1}: &  \sigma_{\alpha\beta}^2 > 0
+\end{array}
+\right.
+$$
+
+Siendo la región crítica:
+
+\[ RC: F_{\alpha\beta}= \dfrac{CM_{\alpha\beta}}{CM_\epsilon} \geq F_{(a-1)(b-1),ab(n-1),1-\alpha} \Leftrightarrow p \leq \alpha\]
+
+
+
+```{r}
+# interacción
+p.valor.ab=1-pf(1.109/1.163,16,100);
+p.valor.ab
+```
+Como el valor del p-valor es $0.5123875$
+No tenemos evidencias significativas suficientes para afirmar que el modelo no sea aditivo
+No podemos rechazar que el modelo sea aditivo.
+
+
+Para los efectos 
+
+
+
+$$
+\left\{
+\begin{array}{ll}
+H_{0}: &  \sigma_{\alpha}^2 = 0\\
+H_{1}: &  \sigma_{\alpha}^2 > 0
+\end{array}
+\right.
+$$
+
+Siendo la región crítica:
+
+\[RC: F_{\alpha}= \dfrac{CM_{\alpha}}{CM_\alpha\beta} \geq F_{(a-1),(a-1)(b-1),1-\alpha} \Leftrightarrow p \leq \alpha
+\]
+
+EL MISMO CONTRASTE PARA BETA
+
+
+
+```{r}
+# efecto principal de b
+p.valor.b=1-pf(15.42/1.109,4,16);
+p.valor.b
+```
+
+
+Análogamente, rechazo H0, es decir, interpretar en términos de la población de efectos. 
+
+
+```{r}
+# efecto principal de a
+p.valor.a=1-pf(167.1/1.109,4,16);
+p.valor.a
+```
+
+
+
+
+
+
+Pero esto no es necesario...podemos utilizar la librería EMSaov (para datos balanceados, como los modelos vistos en el Tema 3):
+
+
+
+```{r}
+datos.ejemplo2=data.frame(resp=y,factor.a=a,factor.b=b)
+sal.aleato=EMSaov::EMSanova(resp~factor.a+factor.b, # IMP: AUNQUE PONGAMOS SUMA, NO SIGNIFICA QUE EL MODELO SEA ADITIVO, SINO QUE COGE EL MODELO COMPLETO
+                            data=datos.ejemplo2,
+                            type=c("R","R") # en el mismo orden que los he metido al inicio
+                                            # R es random
+                            )
+sal.aleato
+# clacula la t anova y la esperanza de los cuadrados medios, es decir, la tabla que necesitamos para los denominadores
+# Error+5factor.a:factor.b+25factor.a # sigma^2a
+# Lo mismo que en mis tablas de apuntes con n, nb, na,...
+```
+
+
+
+
+
+Si suponemos ahora que el factor A es fijo, lo va a analizar suponiendo un modelo con $\Sigma$-restricciones:
+```{r}
+sal.mixto=EMSaov::EMSanova(resp~factor.a+factor.b, data=datos.ejemplo2,type=c("F","R"))
+sal.mixto
+```
+
+
+$$
+\left\{
+\begin{array}{ll}
+H_{0}: & \alpha_1 = \alpha_2 = \dots = \alpha_5\\
+H_{1}: &  \exists  \quad i\neq j / \quad \alpha_1 \neq \alpha_j
+\end{array}
+\right.
+$$
+
+Donde tenemos:
+
+\[ F = \dfrac{CM_{\alpha}}{CM_{\alpha\beta}}\]
+
+Como el b es aleatorio, el denominador es el error. MIRAR y escribir el de b
+
+
+$$
+\left\{
+\begin{array}{ll}
+H_{0}: & \sigma_{\beta}^{2} = 0 \\
+H_{1}: & \sigma_{\beta}^{2} > 0
+\end{array}
+\right.
+$$
+
+Donde tenemos:
+
+\[ F = \dfrac{CM_{\beta}}{CM_{\epsilon}}\]
+
+Conclusión:
+
+-FactorA: Es fijo -> Existen al menos dos niveles del factor A que son distintos.
+
+
+
+
+Conclusión: 
+
+- FactorB: es aleat: La población de niveles de B tienen distinto efecto sobre la muestra
+- FactorA: es fijo: existen al menos dos niveles del factor A que son distintos
+
+La poblacion de niveles de b tienen distinto efecto sobre la muestra.(b es aleatorio)
+Para el contraste de a al menos hay 2 alfas que son distintos. Para verlo vamos a hacer comparaciones multiples.
+
+
+Nótese que cuando calcula las esperanzas de los CM, llama "factor.a" a $\frac{1}{a-1}\sum_{i=1}^a\alpha_i^2$ y que antes llamaba igual $\sigma^2_\alpha$.
+
+Realizamos comparaciones múltiples para los niveles de A: 
+
+
+
+Hay que meter el CM de la interacción con sus grados de lib. NO METER EL DEL ERROR!!! importanteeeeeee
+
+```{r}
+mc=agricolae::SNK.test(y, a, 16, 1.109275) ## ATENCIÓN con el error que es CM_interaccion
+mc$groups
+```
+
+Interpretación: Rechazamos la igualdad de efectos del factor A porque podemos distinguir tres grupos. Si dos grupos tienen la misma letra: no son significativamente distintos. 
+
+- Nivel 3: a
+- Niveles 1 y 5 no son significativamente distintos: Grupo b
+- Niveles 4 y 2 no son significativamente distintos: c
+
+Los niveles tienen un efecto que no es significativamente distinto.
+
+
+
+
+Para lo que viene ahora:
+
+```{r}
+# para no tener que acordarse de introducir la SC correcta
+ejemplo2.mixto=lme4::lmer(y~a+(1|b)+(1|a:b))
+                        #a fijo  #b aleatorio  #iteraccion aleatoria
+library(multcomp)
+mm=glht(ejemplo2.mixto, # lo que es aleatorio va ahí, sabe cual es el denominador
+        linfct=mcp(a="Tukey")) # comparaciones para A con Tukey
+
+
+summary(mm)
+```
+
+
+Misma conclusión: Todos distintos menos los que no son sifnificativamente distintos.
+
+- El 3 es distinto de todos, por lo que el 3 es distinto del resto. Grupo a
+- Grupo b formado por los niveles:5-1 . los niveles de 5-1 no son significativamente distintos
+- Grupo c formado por los niveles:4-2 . los niveles de 4-2 no son significativamente distintos
+
+
+
+
+```{r}
+summary(mm, test=adjusted(type="Westfall")) # newman keuls
+```
+Los niveles de significación cambian un poco
+
+
+
+**EJEMPLO 3.** Considérese una compañía que compra su materia prima a tres proveedores diferentes.
+La compañía desea determinar si la pureza de la materia prima es la misma. Para ello selecciona 4
+lotes de materia prima de cada proveedor, y se realizan tres determinaciones de la pureza en cada
+lote, obteniéndose los siguientes datos ($y_{ijk}$=pureza-93):
+\[
+\begin{array}{lccc}
+\hline %
+ & \mbox{Proveedor 1} & \mbox{Proveedor 2} & \mbox{Proveedor 3} \\ 
+\mbox{Lotes} &
+\begin{array}{rrrr} \hline  1 &  2 &  3 &  4\end{array}
+& \begin{array}{rrrr} \hline 1 & 2 & 3 & 4\end{array}
+& \begin{array}{rrrr} \hline 1 & 2 & 3 & 4\end{array}
+\\ \hline
+ & \begin{array}{rrrr} 1 & -2 & -2 & 1\\ -1 & -3 &  0 & 4\\ 0 & -2 &  1 & 0 \end{array} & 
+ \begin{array}{rrrr}
+ 1 & 0 & -1 & 0 \\ -2 & 4 &  0 & 3\\ -3 & 2 & -2 & 2
+ \end{array} & 
+ \begin{array}{rrrr}
+ 2 & -2 & 1 & 3 \\
+ 4 & 0 & -1 & 2 \\
+ 0 &-2 & 2 & 1  \end{array}\\
+\end{array}
+\]
+
+
+Factor: proveedores (3 niveles)
+Factor: lotes de materia prima (4 niveles)
+
+Vamos a escribir el modelo:
+
+\[y_{ijk} = \mu + \alpha_i + \beta_{j(i)} + \epsilon_{k(ij)}
+\]
+
+Donde \[i,j,k.-....\] escribir subindices
+
+
+Contraste del p-valor 0.244: Concl: no hay dif significativas entre proveedores
+
+$$
+\left\{
+\begin{array}{ll}
+H_{0}: & \alpha_1 = \alpha_2 = \alpha_3\\
+H_{1}: &  \exists  \quad i\neq j / \quad \alpha_1 \neq \alpha_j
+\end{array}
+\right.
+$$
+
+
+
+
+
+
+Para bj(i)
+Tengo el siguiente contraste:
+
+Comparo la igualdad de 12 constantes desconocidas
+
+$$
+\left\{
+\begin{array}{ll}
+H_{0}: & \beta_{1(1)} = \dots =\beta_{b(a)}\\
+H_{1}: &  \exists  \quad (i, j) \neq (r,s)  / \beta_{i(j)} \neq \beta_{r(s)}
+\end{array}
+\right.
+$$
+- En prov:lote  Estoy contrastando: Efecto de los doce lotes es el mismo: EN este caso rechazo, me voy a comp múltiples (p-valor) 0.00701
+
+VAMOS A HACER ESTOS CONTRASTES:
+
+(a) Analiza los datos suponiendo que los proveedores y los lotes son fijos.
+
+```{r}
+y=c(1,-2,-2,1,1,0,-1,0,2,-2,1,3,-1,-3,0,4,-2 ,4 ,0,3,4,0,-1,2,0,-2,1,0,-3,2,-2,2,0,-2,2,1)
+prov=as.factor(rep(rep(1:3,each=4),3))
+lote=as.factor(rep(1:4,9))
+ejemplo3=aov(y~prov+lote%in%prov) #también se puede escribir: ejemplo3=aov(y~prov+prov/lote)
+summary(ejemplo3)
+```
+
+
+
+```{r}
+# obtenemos el mismo resultado si enumeramos los lotes del 1 al 12
+lote.new=as.factor(rep(1:12,3))
+ejemplo3=aov(y~prov+lote.new%in%prov) # los analiza como un cruzado
+summary(ejemplo3)
+```
+
+Me lo analiza bien. No saco la interacción.
+
+
+```{r}
+# si enumeramos los lotes del 1 al 12 también podemos analizar los resultados con el código:
+ejemplo3=aov(y~prov*lote.new); summary(ejemplo3)
+```
+Por tanto, no existen evidencias significativas para afirmar que la pureza varía de proveedor a proveedor,
+aunque sí existen diferencias de pureza entre los lotes. Podemos
+comparar los 12 lotes o bien hacer comparaciones de lotes dentro de cada provedor. Veamos cómo hacer esto último:
+
+```{r}
+# Comparaciones múltiples para los lotes del Proveedor 1
+comp1=agricolae::SNK.test(y[prov==1], lote[prov==1], 24, 2.361) # gr lib error y cuadrado medio error
+comp1$groups
+```
+
+
+```{r}
+# Comparaciones múltiples para los lotes del  Proveedor 2
+comp2=agricolae::SNK.test(y[prov==2], lote[prov==2], 24, 2.361)
+comp2$groups
+```
+
+
+```{r}
+# Comparaciones múltiples para los lotes del  Proveedor 3
+comp3=agricolae::SNK.test(y[prov==3], lote[prov==3], 24, 2.361)
+comp3$groups
+```
+
+\noindent (b) Analiza los datos suponiendo que los proveedores son fijos y los lotes han sido seleccionados al  azar de una población
+de lotes.
+
+```{r}
+ejemplo3.mixto=aov(y~prov+Error(lote%in%prov)) # todo lo que es aleatorio lleva un error delante
+summary(ejemplo3.mixto)
+```
+R no hace contraste sobre las componentes de la varianza. 
+
+En la salida aparecen los siguientes contrastes:
+
+Ahora $\beta_{j(i)} iid \sim N(0, \sigma^2_{B(A)})$
+
+
+
+$$
+\left\{
+\begin{array}{ll}
+H_{0}: & \alpha_1 = \alpha_2 = \alpha_3\\
+H_{1}: &  \exists  \quad i\neq j / \quad \alpha_1 \neq \alpha_j
+\end{array}
+\right.
+$$
+
+F es cmA/cmError
+
+
+Es el mismo. Mientras que para la interacción bj(i) tengo el siguiente contraste:
+
+
+
+$$
+\left\{
+\begin{array}{ll}
+H_{0}: &   \sigma^2_{B(A)} = 0   \\
+H_{1}: &   \sigma^2_{B(A)} > 0
+\end{array}
+\right.
+$$
+
+Y f es CMalpha/CMB(A)
+
+
+
+```{r}
+# Vemos que haciéndolo así sólo constrasta la igualdad de efectos del factor fijo.
+# Mejor usar el paquete EMSaov:
+ejemplo3.data=data.frame(resp=y,factor.a=prov,factor.b=lote)
+sal=EMSaov::EMSanova(resp~factor.a+factor.b, data=ejemplo3.data,
+                     type=c("F","R"), # el primero fijo
+                                      # el segundo aleatorio
+                     nested=c(NA,"factor.a")) # el primer NA es que no está anidado en nada 
+                                              # el segundo es que está anidado en el A
+sal
+```
+
+
+
+
+
+- Primer contraste: Mismo p-valor: 	0.6635. Conclusión: no hay dif significativas entre los proveedores
+- Segundo contraste: 0.007. Conclusión (sobre la población de lotes): hay diferencia en la pureza entre los lotes 
+
+
+
+
+
+
+
